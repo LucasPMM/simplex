@@ -124,7 +124,7 @@ for i, eq in enumerate(equacoes):
                 fator = -fator if is_min else fator
                 c[j] = fator
                 if k != -1:
-                    c[k] = fator
+                    c[k] = -fator
             else:
                 A[i-1, j] = fator
                 if k != -1:
