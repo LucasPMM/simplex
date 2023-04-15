@@ -2,6 +2,9 @@ import numpy as np
 import re
 from collections import OrderedDict
 
+# TODO: resolver uma PL auxiliar caso uma ótima não base não seja trivial
+# Na PL auxiliar o b >= 0 (multiplicar por -1 a linha em que bi < 0)
+
 operations = ['+', '-' , '*', '/']
 folgas = ['>=', '<=']
 comparisons = [*folgas, '==']
