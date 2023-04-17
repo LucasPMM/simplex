@@ -16,7 +16,6 @@ class Tableau:
         self.A = []
         self.b = []
         self.c = []
-        self.x = []
         self.tableau = None
         self.variaveis = []
 
@@ -207,9 +206,28 @@ class Tableau:
             self._pivotear(i,j)
 
     def salvar_resposta(self, file):
+        tableau = self.tableau
+        otimo = tableau[0,-1]
+        linhas, colunas = tableau.shape
+        print('otimo', otimo)
         with open(file, "w") as arquivo:
-            for linha in self.x:
-                arquivo.write(linha + "\n")
+            if otimo >= 0:
+                arquivo.write("Status: otimo\n")
+                arquivo.write(f"Objetivo: {otimo}\n")
+                arquivo.write("Solucao:\n")
+                solucao = ''
+                for i in tableau[0][linhas-1:colunas-1]:
+                    solucao += f"{i} "
+                arquivo.write(f"{solucao}\n")
+                arquivo.write("Certificado:\n")
+                certificado = ''
+                for i in tableau[0][0:linhas-1]:
+                    certificado += f"{i} "
+                arquivo.write(f"{certificado}")
+            elif otimo < 0:
+                print('solução inviável')
+            # TODO: como saber se é ilimitada?
+            # for linha in self.x:
 
 if __name__ == '__main__':
     input_file = sys.argv[1]
@@ -227,4 +245,6 @@ if __name__ == '__main__':
     print('Tableau:\n', t.tableau)
 
     t.solve()
+    print('Tableau resolvido:\n', t.tableau)
+
     t.salvar_resposta(output_file)
