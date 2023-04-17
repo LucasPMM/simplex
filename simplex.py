@@ -164,8 +164,47 @@ class Tableau:
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         self.tableau = tableau
 
+    def _check(self):
+        linhas, _ = self.A.shape
+        _, colunas = self.tableau.shape
+        c = self.tableau[0][linhas:colunas-1]
+        if min(c) >= 0: 
+            return True
+        return False
+
+    def _pivotear(self, i, j):
+        n = self.tableau.shape[0]
+        self.tableau[i] /= self.tableau[i, j] # divide a linha i pela entrada ij
+        for k in range(n):
+            if k == i:
+                continue
+            self.tableau[k] -= self.tableau[i] * self.tableau[k, j] # subtrai um múltiplo da linha i da linha k
+
     def solve(self):
-        print('solve')
+        # (1) Verificar/colocar o tableau na forma canonica (como já colocamos as folgas, basta verificar se 
+        # a variável ci da coluna pertencente a base é 0)
+        # (2) Econtrar uma base viável (caso não seja trivial, encontrar na PL auxiliar)
+        linhas, _ = self.A.shape
+        _, colunas = self.tableau.shape
+        while not self._check():
+            # (3) Escolher o menor ci tal que ci < 0
+            c = self.tableau[0][linhas:colunas-1]
+            j = np.where(c == min(c))[0][0] + linhas
+            
+            # (4) Escolher a menor razão (positiva) de bj / aij
+            menor_razao = float('inf')
+            i = None
+            for k in range(1, linhas + 1):
+                b_k = self.tableau[k,colunas-1]
+                a_kj = self.tableau[k,j]
+                razao = b_k / a_kj
+                # TODO: verificar possibilidade de loopar
+                if razao >= 0 and (razao <= menor_razao or menor_razao == None):
+                    i = k
+                    menor_razao = razao
+
+            # (5) Pivotear o elemento aij de forma a transformar a coluna i em uma subcoluna da matriz identidade
+            self._pivotear(i,j)
 
     def salvar_resposta(self, file):
         with open(file, "w") as arquivo:
