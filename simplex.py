@@ -179,10 +179,39 @@ class Tableau:
                 continue
             self.tableau[k] -= self.tableau[i] * self.tableau[k, j] # subtrai um múltiplo da linha i da linha k
 
+    def _problema_auxiliar(self):
+        # Econtra uma base viável
+        # Coloca o tableau original na forma canonica
+        return
+    
+    def _padronizar_tableau(self):
+        linhas, colunas = self.tableau.shape
+        identidade = np.identity(linhas-1)
+        for j in range(colunas-1,linhas-2,-1):
+            col_j = self.tableau[:, j]
+            # TODO: tratar tablaeus com zero/uma restrição
+            candidata = np.count_nonzero(col_j[1:]) == linhas - 2
+            i = np.nonzero(col_j[1:])[0][0] + 1
+            if candidata:
+                self._pivotear(i, j)
+                identidade_gerada = np.zeros(linhas-1)
+                identidade_gerada[i-1] = 1
+                identidade = np.delete(identidade, i-1, axis=1)
+                # Se já completou a base trivial pode parar o loop
+                if identidade.shape[1] == 0:
+                    break
+
+        print('Tableau canonico:\n', self.tableau)
+        tem_base_trivial = identidade.shape[1] == 0
+        return tem_base_trivial
+
     def solve(self):
-        # (1) Verificar/colocar o tableau na forma canonica (como já colocamos as folgas, basta verificar se 
-        # a variável ci da coluna pertencente a base é 0)
-        # (2) Econtrar uma base viável (caso não seja trivial, encontrar na PL auxiliar)
+        # (1) Colocar o tableau em forma canonica (zerar as variáveis ci correspondentes as variáveis básicas)
+        tem_base_trivial = self._padronizar_tableau()
+        # (2) Econtrar uma base viável caso necessário (PL auxiliar)
+        if not tem_base_trivial:
+            self._problema_auxiliar()
+    
         linhas, _ = self.A.shape
         _, colunas = self.tableau.shape
         while not self._check():
@@ -209,7 +238,6 @@ class Tableau:
         tableau = self.tableau
         otimo = tableau[0,-1]
         linhas, colunas = tableau.shape
-        print('otimo', otimo)
         with open(file, "w") as arquivo:
             if otimo >= 0:
                 arquivo.write("Status: otimo\n")
@@ -248,3 +276,34 @@ if __name__ == '__main__':
     print('Tableau resolvido:\n', t.tableau)
 
     t.salvar_resposta(output_file)
+
+
+# Testar: 
+
+# Problema "identidade" (multiplas bases viáveis possíveis):
+# Ex1:
+# MAX x1 + x2 + x3
+# x1 <= 3
+# x2 <= 3
+# x3 <= 3
+# x >= 0
+#     x1 x2 x3 f1 f2 f3 b
+#  [[ 0  0  1  1  1  1  0]
+#   [ 1  0  0  1  0  0  3]
+#   [ 0  1  0  0  1  0  3]
+#   [ 0  0  1  0  0  1  3]]
+
+# Problema "degenerado":
+# Ex1:
+# MAX
+
+# Ex2:
+# MAX x1 + x2
+
+# Ex3:
+# MAX
+# x1 + x2 <= 10
+
+# Ex4:
+# MAX x1 + x2
+# x3 + x4 >= 4
