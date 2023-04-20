@@ -24,12 +24,13 @@ class Tableau:
         proximo_negativo = False
         tem_numerador = False
         fator = None
+        valor_final = False
         funcao_objetivo = False
         is_min = False
         # Caso seja uma condição de maior ou igual devemos inverter o sinal dos termos
         # O sistema será da forma Ax <= b, sendo apenas necessário adicionar as folgas
         inversor = -1 if '>=' in termos else 1
-        for termo in termos:
+        for idx, termo in enumerate(termos):
             if termo in comparisons:
                 # Atribuir o valor 1 as folgas da equação correspondente
                 if termo in folgas:
@@ -43,8 +44,9 @@ class Tableau:
                     if j != -1:
                         A[i-1,j] = 1
 
-                valor = float(termos[termos.index(termo) + 1])
-                b[i-1] = valor * inversor if valor != 0.0 else valor
+                valor_final = True
+                fator = None
+
             elif termo in operations:
                 if termo == '+':
                     proximo_negativo = False
@@ -61,8 +63,16 @@ class Tableau:
                 if tem_numerador:
                     tem_numerador = False
                     fator = fator / float(termo)
-                    continue
-                fator = float(termo)
+                    if not valor_final:
+                        continue
+                else:
+                    fator = float(termo)
+                if valor_final and idx == len(termos) - 1:
+                    fator = 1 if fator == None else fator
+                    fator = -fator if proximo_negativo else fator
+                    fator = fator * inversor if fator != 0.0 else fator
+                    b[i-1] = fator
+                    break
                 continue
             elif termo in functions:
                 is_min = True if termo == 'MIN' else False
@@ -182,6 +192,20 @@ class Tableau:
     def _problema_auxiliar(self):
         # Econtra uma base viável
         # Coloca o tableau original na forma canonica
+        linhas, colunas = self.A.shape
+        tableau_dash = np.zeros((linhas, colunas + linhas + 1))
+        b_dash = self.b
+        A_dash = self.A
+        for i, b_i in enumerate(b_dash):
+            if b_i <= 0:
+                A_dash[i] = A_dash[i] * -1
+                b_dash[i] = b_dash[i] * -1
+
+        c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (-1)], [np.zeros(1)]), axis=1)
+        tableau_dash = np.concatenate((A_dash, np.identity(linhas), np.array(b_dash).reshape(-1, 1)), axis=1)
+        tableau = np.concatenate((c_dash, tableau_dash), axis=0)
+        print('Tableau auxiliar:\n', tableau)
+
         return
     
     def _padronizar_tableau(self):
