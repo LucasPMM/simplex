@@ -77,7 +77,7 @@ class Tableau:
             elif termo in functions:
                 is_min = True if termo == 'MIN' else False
                 funcao_objetivo = True
-            else:
+            elif termo in variaveis:
                 fator = 1 if fator == None else fator
                 fator = -fator if proximo_negativo else fator
                 fator = fator * inversor if fator != 0.0 else fator
@@ -173,11 +173,11 @@ class Tableau:
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         self.tableau = tableau
 
-    def _check(self):
+    def _check(self, c=None):
         linhas, _ = self.A.shape
         _, colunas = self.tableau.shape
-        c = self.tableau[0][linhas:colunas-1]
-        if min(c) >= 0: 
+        c_t = c if c != None else self.tableau[0][linhas:colunas-1]
+        if min(c_t) >= 0: 
             return True
         return False
 
@@ -208,6 +208,7 @@ class Tableau:
 
         return
     
+    # TODO: essa função vai receber um array informando as variáveis da base e vai pivotear
     def _padronizar_tableau(self):
         linhas, colunas = self.tableau.shape
         identidade = np.identity(linhas-1)
@@ -217,11 +218,13 @@ class Tableau:
             candidata = np.count_nonzero(col_j[1:]) == linhas - 2
             i = np.nonzero(col_j[1:])[0][0] + 1
             if candidata:
-                self._pivotear(i, j)
-                identidade_gerada = np.zeros(linhas-1)
-                identidade_gerada[i-1] = 1
-                identidade = np.delete(identidade, i-1, axis=1)
-                # Se já completou a base trivial pode parar o loop
+                try:
+                    identidade_gerada = np.zeros(linhas-1)
+                    identidade_gerada[i-1] = 1
+                    identidade = np.delete(identidade, i-1, axis=1)
+                    self._pivotear(i, j)
+                except IndexError:
+                    pass
                 if identidade.shape[1] == 0:
                     break
 
@@ -229,12 +232,14 @@ class Tableau:
         tem_base_trivial = identidade.shape[1] == 0
         return tem_base_trivial
 
+    # TODO: sempre resolver o problema auxiliar para achar uma solução ótima
     def solve(self):
         # (1) Colocar o tableau em forma canonica (zerar as variáveis ci correspondentes as variáveis básicas)
-        tem_base_trivial = self._padronizar_tableau()
+        # tem_base_trivial = self._padronizar_tableau()
         # (2) Econtrar uma base viável caso necessário (PL auxiliar)
-        if not tem_base_trivial:
-            self._problema_auxiliar()
+        # if not tem_base_trivial:
+        #     self._problema_auxiliar()
+        self._problema_auxiliar()
     
         linhas, _ = self.A.shape
         _, colunas = self.tableau.shape
@@ -257,6 +262,7 @@ class Tableau:
 
             # (5) Pivotear o elemento aij de forma a transformar a coluna i em uma subcoluna da matriz identidade
             self._pivotear(i,j)
+            print('Iteração:\n ', self.tableau)
 
     def salvar_resposta(self, file):
         tableau = self.tableau
