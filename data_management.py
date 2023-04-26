@@ -186,3 +186,4 @@ def read_data(self, file):
     for i in range(n_eq):  
         auxiliares.append(f"{globals.tag_auxiliar}" + str(i+1))
     self.variaveis_auxiliares = [*variaveis, *auxiliares]
+    self.base_viavel = [None] * (n_eq or 1)

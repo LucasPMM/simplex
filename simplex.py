@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 from data_management import read_data
+import globals
 
 class Tableau:
     def __init__(self):
@@ -66,17 +67,31 @@ class Tableau:
         if otimo < 0:
             print('PL inviável')
             return
-        # TODO: Definir base para o problema original e retorná-la
+        print('BASE FINAL: ', self.base_viavel)
+
         # Se usa alguma variável auxiliar => substituir por alguma não básica
-        
-        return
+        base_otima = self.base_viavel
+        for idx, variavel in self.base_viavel:
+            if globals.tag_controle in variavel:
+                disponiveis = list(filter(lambda x: x not in base_otima, self.base_viavel)) or []
+                base_otima[idx] = disponiveis[0]
+        self.base_viavel = base_otima
+        return base_otima
     
     def _padronizar_tableau(self, tableau, base=None):
         linhas, colunas = tableau.shape
         identidade = np.identity(linhas-1)
+
+        if base != None:
+            for idx, variavel in enumerate(base):
+                j = self.variaveis_auxiliares.index(variavel)
+                tableau = self._pivotear(tableau, idx + 1, j + linhas-1)
+
+            # Retornando True pois o tableau já está na forma canonica
+            return tableau, True
+        
         # colunas-2 para ignorar a coluna do vetor b e -1 para ir até a primeira coluna
         # começa da ultima para já identificar a base do problema auxiliar
-        # Obs: se a entrada for um tableau estendido, trocar -1 por linhas-2
         for j in range(colunas-2,linhas-2,-1):
             col_j = tableau[:, j]
             # TODO: tratar tablaeus com zero restrições
@@ -89,7 +104,12 @@ class Tableau:
                         identidade_gerada[i-1] = 1
                         identidade = np.delete(identidade, i-1, axis=1)
                         tableau = self._pivotear(tableau, i, j)
-                        # self.variaveis_basicas(self.variaveis[j-1])
+
+                        entra_na_base = self.variaveis_auxiliares[j-(linhas-1)]
+                        sai_da_base = self.base_viavel[i-1]
+                        print('Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
+                        self.base_viavel[i-1] = entra_na_base
+
                     except IndexError:
                         pass
                 if identidade.shape[1] == 0:
@@ -102,11 +122,15 @@ class Tableau:
         linhas = linhas - 1
 
         while not self._check(tableau):
-            # (3) Escolher o menor ci tal que ci < 0
+            # Escolher o ci de menor indice tal que ci < 0 (Regra de Bland)
             c = tableau[0][linhas:colunas-1]
-            j = np.where(c == min(c))[0][0] + linhas
+            j = linhas
+            for idx, ci in enumerate(c):
+                if ci < 0:
+                    j += idx
+                    break
 
-            # (4) Escolher a menor razão (positiva) de bj / aij
+            # Escolher a menor razão (positiva) de bj / aij
             menor_razao = float('inf')
             i = None
             for k in range(1, linhas + 1):
@@ -115,13 +139,19 @@ class Tableau:
                 razao = -1 if a_kj == 0.0 else b_k / a_kj
                 # TODO: verificar possibilidade de loopar
                 # TODO: verificar os impactos do b_k = 0
+                #  razao < menor_razao e não <= para priorizar os menores indices
                 if razao >= 0 and (razao < menor_razao or menor_razao == None):
                     i = k
                     menor_razao = razao
 
-            # (5) Pivotear o elemento aij de forma a transformar a coluna i em uma subcoluna da matriz identidade
+            # Pivotear o elemento aij de forma a transformar a coluna i em uma subcoluna da matriz identidade
             if i != None and j != None:
                 tableau = self._pivotear(tableau, i,j)
+                entra_na_base = self.variaveis_auxiliares[j-linhas]
+                sai_da_base = self.base_viavel[i-1]
+                print('Solving: Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
+                self.base_viavel[i-1] = entra_na_base
+
                 print('Iteração:\n ', tableau)
             else:
                 print('Ilimitada!')
@@ -145,7 +175,7 @@ class Tableau:
         print('Tableau inicial:\n', tableau)
         tableau, tem_base_trivial = self._padronizar_tableau(tableau)
         print('Tableau padronizado:\n', tableau)
-        print('Base trivial:\n', tem_base_trivial)
+        print('Base trivial:\n', tem_base_trivial, self.base_viavel)
 
         # Checar se já é ótimo:
         if self._check(tableau) and tem_base_trivial:
@@ -157,6 +187,8 @@ class Tableau:
             print('PL ilimitada')
             return
 
+        # Setar as novas variáveis como a base da PL auxiliar
+        self.base_viavel = self.variaveis_auxiliares[-linhas:]
         base = self._problema_auxiliar()
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
