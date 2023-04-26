@@ -11,6 +11,8 @@ class Tableau:
         self.variaveis = []
 
         self.tableau_auxiliar = None
+        self.variaveis_auxiliares = []
+
         self.base_viavel = []
         self.tableau = None
         self.variaveis_basicas = []
@@ -58,8 +60,15 @@ class Tableau:
 
         self.tableau_auxiliar = self._solve_tableau(tableau)
         print('Tableau auxiliar otimo:\n', self.tableau_auxiliar)
-        # TODO: Se for inviável retornar
+
+        linhas, colunas = self.tableau_auxiliar.shape
+        otimo = self.tableau_auxiliar[linhas-1][colunas-1]
+        if otimo < 0:
+            print('PL inviável')
+            return
         # TODO: Definir base para o problema original e retorná-la
+        # Se usa alguma variável auxiliar => substituir por alguma não básica
+        
         return
     
     def _padronizar_tableau(self, tableau, base=None):
@@ -132,14 +141,29 @@ class Tableau:
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         # Montando o tableau estendido ANTES colocá-lo na forma canônica
         tableau = np.concatenate((certificados, tableau), axis=1)
+       
         print('Tableau inicial:\n', tableau)
+        tableau, tem_base_trivial = self._padronizar_tableau(tableau)
+        print('Tableau padronizado:\n', tableau)
+        print('Base trivial:\n', tem_base_trivial)
+
+        # Checar se já é ótimo:
+        if self._check(tableau) and tem_base_trivial:
+            print('Tableau já em estado de ótimo')
+            return
+
+        # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
+        if np.all(self.A == 0):
+            print('PL ilimitada')
+            return
 
         base = self._problema_auxiliar()
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
-        print('Tableau:\n', t.tableau)
-
+        print('Tableau na base viável:\n', t.tableau)
+     
+        # Checar novamente se já é ótimo:
         if self._check(self.tableau) and tem_base_trivial:
             print('Tableau já em estado de ótimo')
             return

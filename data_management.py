@@ -182,3 +182,7 @@ def read_data(self, file):
     if len(variaveis) > 0 and variaveis[0] != globals.tag_controle and n_eq == 0:
         self.A = np.zeros((1, n_var + n_folgas + n_livres))
         
+    auxiliares = []
+    for i in range(n_eq):  
+        auxiliares.append(f"{globals.tag_auxiliar}" + str(i+1))
+    self.variaveis_auxiliares = [*variaveis, *auxiliares]

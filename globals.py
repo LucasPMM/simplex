@@ -5,4 +5,5 @@ functions = ['MAX', 'MIN']
 
 tag_folga = 'f_'
 tag_livre = 'l_'
+tag_auxiliar = 'auxiliar_'
 tag_controle = 'CONTROL_'
