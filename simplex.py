@@ -3,9 +3,6 @@ import sys
 import re
 from collections import OrderedDict
 
-# TODO: resolver uma PL auxiliar caso uma ótima não base não seja trivial
-# Na PL auxiliar o b >= 0 (multiplicar por -1 a linha em que bi < 0)
-
 operations = ['+', '-' , '*', '/']
 folgas = ['>=', '<=']
 comparisons = [*folgas, '==']
@@ -16,8 +13,13 @@ class Tableau:
         self.A = []
         self.b = []
         self.c = []
-        self.tableau = None
+        self.valor_inicial = 0.0
         self.variaveis = []
+
+        self.tableau_auxiliar = None
+        self.base_viavel = []
+        self.tableau = None
+        self.variaveis_basicas = []
 
     def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
         termos = eq.split()
@@ -26,6 +28,7 @@ class Tableau:
         fator = None
         valor_final = False
         funcao_objetivo = False
+        valor_inicial = 0.0
         is_min = False
         # Caso seja uma condição de maior ou igual devemos inverter o sinal dos termos
         # O sistema será da forma Ax <= b, sendo apenas necessário adicionar as folgas
@@ -49,9 +52,19 @@ class Tableau:
 
             elif termo in operations:
                 if termo == '+':
+                    if fator != None:
+                        fator = -fator if proximo_negativo else fator
+                        fator = fator * inversor if fator != 0.0 else fator
+                        valor_inicial = fator
+                        fator = None
                     proximo_negativo = False
                     continue
                 elif termo == '-':
+                    if fator != None:
+                        fator = -fator if proximo_negativo else fator
+                        fator = fator * inversor if fator != 0.0 else fator
+                        valor_inicial = fator
+                        fator = None
                     proximo_negativo = True
                     continue
                 elif termo == '*':
@@ -62,17 +75,23 @@ class Tableau:
             elif termo.isdigit():
                 if tem_numerador:
                     tem_numerador = False
-                    fator = fator / float(termo)
+                    fator = 0.0 if float(termo) == 0.0 else fator / float(termo)
                     if not valor_final:
                         continue
                 else:
                     fator = float(termo)
-                if valor_final and idx == len(termos) - 1:
-                    fator = 1 if fator == None else fator
-                    fator = -fator if proximo_negativo else fator
-                    fator = fator * inversor if fator != 0.0 else fator
-                    b[i-1] = fator
-                    break
+                if idx == len(termos) - 1:
+                    if valor_final and not funcao_objetivo:
+                        fator = 1 if fator == None else fator
+                        fator = -fator if proximo_negativo else fator
+                        fator = fator * inversor if fator != 0.0 else fator
+                        b[i-1] = fator
+                        break
+                    elif funcao_objetivo:
+                        fator = 0 if fator == None else fator
+                        fator = -fator if proximo_negativo else fator
+                        fator = fator * inversor if fator != 0.0 else fator
+                        valor_inicial = fator
                 continue
             elif termo in functions:
                 is_min = True if termo == 'MIN' else False
@@ -101,6 +120,9 @@ class Tableau:
                         A[i-1,k] = -fator
                 fator = None
                 continue
+        if funcao_objetivo:
+            print('VALOR INICIAL', valor_inicial)
+            self.valor_inicial = valor_inicial
 
     def read_data(self, file):
         # ler arquivo de entrada e armazenar equações em lista
@@ -160,37 +182,31 @@ class Tableau:
 
         for i, eq in enumerate(equacoes):
             self._adicionar_restricao(i, eq, variaveis, A, b, c)
-        self.A = A
-        self.b = b
+        # TODO: Se A não tiver restrições, colocar uma linhas de 0's
+        self.A = np.zeros((1, n_var + n_folgas + n_livres)) if n_eq == 0 else A
+        self.b = [0] if n_eq == 0 else b
         self.c = c
         self.variaveis = variaveis
 
-    def montar_tableau(self):
-        linhas, colunas = self.A.shape
-        tableau_dash = np.zeros((linhas, colunas + linhas + 1))
-        c_dash = np.concatenate(([np.zeros(linhas)], [(self.c * -1)], [np.zeros(1)]), axis=1)
-        tableau_dash = np.concatenate((np.identity(linhas), self.A, np.array(self.b).reshape(-1, 1)), axis=1)
-        tableau = np.concatenate((c_dash, tableau_dash), axis=0)
-        self.tableau = tableau
-
-    def _check(self, c=None):
-        linhas, _ = self.A.shape
-        _, colunas = self.tableau.shape
-        c_t = c if c != None else self.tableau[0][linhas:colunas-1]
+    def _check(self, tableau):
+        linhas, colunas = tableau.shape
+        linhas -= 1
+        c_t = [tableau[0][0]] if colunas-1 == 0 else tableau[0][linhas:colunas-1]
         if min(c_t) >= 0: 
             return True
         return False
 
-    def _pivotear(self, i, j):
-        n = self.tableau.shape[0]
-        self.tableau[i] /= self.tableau[i, j] # divide a linha i pela entrada ij
+    def _pivotear(self, tableau, i, j):
+        n = tableau.shape[0]
+        tableau[i] = (tableau[i] / tableau[i, j]) if (tableau[i, j] != 0).any() else 0.0 # divide a linha i pela entrada ij
         for k in range(n):
             if k == i:
                 continue
-            self.tableau[k] -= self.tableau[i] * self.tableau[k, j] # subtrai um múltiplo da linha i da linha k
+            tableau[k] -= tableau[i] * tableau[k, j] # subtrai um múltiplo da linha i da linha k
+        return tableau
 
     def _problema_auxiliar(self):
-        # Econtra uma base viável
+        # Encontra uma base viável
         # Coloca o tableau original na forma canonica
         linhas, colunas = self.A.shape
         tableau_dash = np.zeros((linhas, colunas + linhas + 1))
@@ -201,68 +217,102 @@ class Tableau:
                 A_dash[i] = A_dash[i] * -1
                 b_dash[i] = b_dash[i] * -1
 
-        c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (-1)], [np.zeros(1)]), axis=1)
+        certificados = np.zeros(linhas)
+        certificados = np.concatenate(([certificados], np.identity(linhas)), axis=0)
+        # Como o vetor c é invertido no tableau, colocamos 1's no lugar dos -1's
+        c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (1)], np.array(self.valor_inicial).reshape(-1, 1)), axis=1)
         tableau_dash = np.concatenate((A_dash, np.identity(linhas), np.array(b_dash).reshape(-1, 1)), axis=1)
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
-        print('Tableau auxiliar:\n', tableau)
+        tableau = np.concatenate((certificados, tableau), axis=1)
 
+        print('Tableau auxiliar:\n', tableau)
+        tableau, _ = self._padronizar_tableau(tableau)
+        print('Tableau auxiliar padronizado:\n', tableau)
+
+        self.tableau_auxiliar = self._solve_tableau(tableau)
+        print('Tableau auxiliar otimo:\n', self.tableau_auxiliar)
+        # TODO: Se for inviável retornar
+        # TODO: Definir base para o problema original e retorná-la
         return
     
-    # TODO: essa função vai receber um array informando as variáveis da base e vai pivotear
-    def _padronizar_tableau(self):
-        linhas, colunas = self.tableau.shape
+    def _padronizar_tableau(self, tableau, base=None):
+        linhas, colunas = tableau.shape
         identidade = np.identity(linhas-1)
-        for j in range(colunas-1,linhas-2,-1):
-            col_j = self.tableau[:, j]
-            # TODO: tratar tablaeus com zero/uma restrição
-            candidata = np.count_nonzero(col_j[1:]) == linhas - 2
-            i = np.nonzero(col_j[1:])[0][0] + 1
+        # colunas-2 para ignorar a coluna do vetor b e -1 para ir até a primeira coluna
+        # começa da ultima para já identificar a base do problema auxiliar
+        # Obs: se a entrada for um tableau estendido, trocar -1 por linhas-2
+        for j in range(colunas-2,linhas-2,-1):
+            col_j = tableau[:, j]
+            # TODO: tratar tablaeus com zero restrições
+            candidata = np.count_nonzero(col_j[1:]) == linhas - 2 if linhas - 2 > 0 else col_j[1] != 0
             if candidata:
-                try:
-                    identidade_gerada = np.zeros(linhas-1)
-                    identidade_gerada[i-1] = 1
-                    identidade = np.delete(identidade, i-1, axis=1)
-                    self._pivotear(i, j)
-                except IndexError:
-                    pass
+                i = np.nonzero(col_j[1:])[0][0] + 1
+                if i != None:
+                    try:
+                        identidade_gerada = np.zeros(linhas-1)
+                        identidade_gerada[i-1] = 1
+                        identidade = np.delete(identidade, i-1, axis=1)
+                        tableau = self._pivotear(tableau, i, j)
+                        # self.variaveis_basicas(self.variaveis[j-1])
+                    except IndexError:
+                        pass
                 if identidade.shape[1] == 0:
                     break
-
-        print('Tableau canonico:\n', self.tableau)
         tem_base_trivial = identidade.shape[1] == 0
-        return tem_base_trivial
+        return tableau, tem_base_trivial
 
-    # TODO: sempre resolver o problema auxiliar para achar uma solução ótima
-    def solve(self):
-        # (1) Colocar o tableau em forma canonica (zerar as variáveis ci correspondentes as variáveis básicas)
-        # tem_base_trivial = self._padronizar_tableau()
-        # (2) Econtrar uma base viável caso necessário (PL auxiliar)
-        # if not tem_base_trivial:
-        #     self._problema_auxiliar()
-        self._problema_auxiliar()
-    
-        linhas, _ = self.A.shape
-        _, colunas = self.tableau.shape
-        while not self._check():
+    def _solve_tableau(self, tableau):
+        linhas, colunas = tableau.shape
+        linhas = linhas - 1
+
+        while not self._check(tableau):
             # (3) Escolher o menor ci tal que ci < 0
-            c = self.tableau[0][linhas:colunas-1]
+            c = tableau[0][linhas:colunas-1]
             j = np.where(c == min(c))[0][0] + linhas
-            
+
             # (4) Escolher a menor razão (positiva) de bj / aij
             menor_razao = float('inf')
             i = None
             for k in range(1, linhas + 1):
-                b_k = self.tableau[k,colunas-1]
-                a_kj = self.tableau[k,j]
-                razao = b_k / a_kj
+                b_k = tableau[k,colunas-1]
+                a_kj = tableau[k,j]
+                razao = 0 if a_kj == 0.0 else b_k / a_kj
                 # TODO: verificar possibilidade de loopar
-                if razao >= 0 and (razao <= menor_razao or menor_razao == None):
+                if razao > 0 and (razao <= menor_razao or menor_razao == None):
                     i = k
                     menor_razao = razao
 
             # (5) Pivotear o elemento aij de forma a transformar a coluna i em uma subcoluna da matriz identidade
-            self._pivotear(i,j)
-            print('Iteração:\n ', self.tableau)
+            if i != None and j != None:
+                tableau = self._pivotear(tableau, i,j)
+                print('Iteração:\n ', tableau)
+
+        return tableau
+
+
+    def solve(self):
+        base = self._problema_auxiliar()
+       
+        linhas, colunas = self.A.shape
+        certificados = np.zeros(linhas)
+        certificados = np.concatenate(([certificados], np.identity(linhas)), axis=0)
+
+        tableau_dash = np.zeros((linhas, colunas + linhas + 1))
+        c_dash = np.concatenate(([(self.c * -1)], np.array(self.valor_inicial).reshape(-1, 1)), axis=1)
+        tableau_dash = np.concatenate((self.A, np.array(self.b).reshape(-1, 1)), axis=1)
+        tableau = np.concatenate((c_dash, tableau_dash), axis=0)
+        # Montando o tableau estendido ANTES colocá-lo na forma canônica
+        tableau = np.concatenate((certificados, tableau), axis=1)
+
+        tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
+        self.tableau = tableau
+        print('Tableau:\n', t.tableau)
+
+        if self._check(self.tableau) and tem_base_trivial:
+            print('Tableau já em estado de ótimo')
+            return
+        
+        self.tableau = self._solve_tableau(self.tableau)
 
     def salvar_resposta(self, file):
         tableau = self.tableau
@@ -284,8 +334,6 @@ class Tableau:
                 arquivo.write(f"{certificado}")
             elif otimo < 0:
                 print('solução inviável')
-            # TODO: como saber se é ilimitada?
-            # for linha in self.x:
 
 if __name__ == '__main__':
     input_file = sys.argv[1]
@@ -298,9 +346,6 @@ if __name__ == '__main__':
     print('c: ', t.c)
     print('A: ', t.A)
     print('b: ', t.b)
-
-    t.montar_tableau()
-    print('Tableau:\n', t.tableau)
 
     t.solve()
     print('Tableau resolvido:\n', t.tableau)
@@ -326,6 +371,9 @@ if __name__ == '__main__':
 # Problema "degenerado":
 # Ex1:
 # MAX
+
+# Ex1.1:
+# MAX 4
 
 # Ex2:
 # MAX x1 + x2
