@@ -2,8 +2,6 @@ import numpy as np
 import sys
 from data_management import read_data
 
-
-
 class Tableau:
     def __init__(self):
         self.A = []
@@ -124,8 +122,6 @@ class Tableau:
 
 
     def solve(self):
-        base = self._problema_auxiliar()
-       
         linhas, colunas = self.A.shape
         certificados = np.zeros(linhas)
         certificados = np.concatenate(([certificados], np.identity(linhas)), axis=0)
@@ -136,6 +132,9 @@ class Tableau:
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         # Montando o tableau estendido ANTES colocá-lo na forma canônica
         tableau = np.concatenate((certificados, tableau), axis=1)
+        print('Tableau inicial:\n', tableau)
+
+        base = self._problema_auxiliar()
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau

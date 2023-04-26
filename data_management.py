@@ -37,7 +37,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
                     fator = fator * inversor if fator != 0.0 else fator
-                    valor_inicial = fator
+                    valor_inicial = -fator if is_min else fator
                     fator = None
                 proximo_negativo = False
                 continue
@@ -45,7 +45,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
                     fator = fator * inversor if fator != 0.0 else fator
-                    valor_inicial = fator
+                    valor_inicial = -fator if is_min else fator
                     fator = None
                 proximo_negativo = True
                 continue
@@ -58,7 +58,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             if tem_numerador:
                 tem_numerador = False
                 fator = 0.0 if float(termo) == 0.0 else fator / float(termo)
-                if not valor_final:
+                if not valor_final and not funcao_objetivo:
                     continue
             else:
                 fator = float(termo)
@@ -73,7 +73,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                     fator = 0 if fator == None else fator
                     fator = -fator if proximo_negativo else fator
                     fator = fator * inversor if fator != 0.0 else fator
-                    valor_inicial = fator
+                    valor_inicial = -fator if is_min else fator
             continue
         elif termo in globals.functions:
             is_min = True if termo == 'MIN' else False
@@ -174,10 +174,11 @@ def read_data(self, file):
     objetivo = equacoes[0] + ' 0' if equacoes[0] == 'MAX' or equacoes[0] == 'MIN' else equacoes[0]
     objetivo = objetivo.split()
     # Função objetivo sem variáveis e sem restrições? Adiciona uma variável de controle
-    if len(objetivo) == 2 and objetivo[1].isdigit() and n_eq == 0:
+    if len(variaveis) == 0 and n_eq == 0:
         variaveis.append(globals.tag_controle)
         self.c = np.zeros(1)
-        self.A = np.zeros(1,1)
+        self.A = np.zeros((1,1))
     # Função objetivo com variáveis e sem restrições? Adiciona uma linha de zeros
-    if len(objetivo) >= 2 and len(variaveis) >= 0 and n_eq == 0:
+    if len(variaveis) > 0 and variaveis[0] != globals.tag_controle and n_eq == 0:
         self.A = np.zeros((1, n_var + n_folgas + n_livres))
+        
