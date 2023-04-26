@@ -276,9 +276,10 @@ class Tableau:
             for k in range(1, linhas + 1):
                 b_k = tableau[k,colunas-1]
                 a_kj = tableau[k,j]
-                razao = 0 if a_kj == 0.0 else b_k / a_kj
+                razao = -1 if a_kj == 0.0 else b_k / a_kj
                 # TODO: verificar possibilidade de loopar
-                if razao > 0 and (razao <= menor_razao or menor_razao == None):
+                # TODO: verificar os impactos do b_k = 0
+                if razao >= 0 and (razao < menor_razao or menor_razao == None):
                     i = k
                     menor_razao = razao
 
@@ -286,6 +287,9 @@ class Tableau:
             if i != None and j != None:
                 tableau = self._pivotear(tableau, i,j)
                 print('Iteração:\n ', tableau)
+            else:
+                print('Ilimitada!')
+                return
 
         return tableau
 
