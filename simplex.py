@@ -184,37 +184,3 @@ if __name__ == '__main__':
     print('Tableau resolvido:\n', t.tableau)
 
     t.salvar_resposta(output_file)
-
-
-# Testar: 
-
-# Problema "identidade" (multiplas bases viáveis possíveis):
-# Ex1:
-# MAX x1 + x2 + x3
-# x1 <= 3
-# x2 <= 3
-# x3 <= 3
-# x >= 0
-#     x1 x2 x3 f1 f2 f3 b
-#  [[ 0  0  1  1  1  1  0]
-#   [ 1  0  0  1  0  0  3]
-#   [ 0  1  0  0  1  0  3]
-#   [ 0  0  1  0  0  1  3]]
-
-# Problema "degenerado":
-# Ex1:
-# MAX
-
-# Ex1.1:
-# MAX 4
-
-# Ex2:
-# MAX x1 + x2
-
-# Ex3:
-# MAX
-# x1 + x2 <= 10
-
-# Ex4:
-# MAX x1 + x2
-# x3 + x4 >= 4

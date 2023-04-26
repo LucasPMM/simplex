@@ -19,7 +19,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
         if termo in globals.comparisons:
             # Atribuir o valor 1 as folgas da equação correspondente
             if termo in globals.folgas:
-                label_folga = 'f_' + str(i)
+                label_folga = globals.tag_folga + str(i)
                 j = -1
                 try:
                     j = variaveis.index(label_folga)
@@ -87,7 +87,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             # Verificar se a variável e livre e, caso seja, atribuir (-1)*fator a parte negativa dela 
             k = -1
             try:
-                k = variaveis.index('l_' + termo)
+                k = variaveis.index(globals.tag_livre + termo)
             except ValueError:
                 pass
 
@@ -138,13 +138,13 @@ def read_data(self, file):
     variaveis_livres = list(filter(lambda x: (f"{x} >= 0" not in nao_negatividade and f"- {x} <= 0" not in nao_negatividade), variaveis))
     n_livres = len(variaveis_livres) or 0
     for i in variaveis_livres:
-        variaveis.append('l_' + i)
+        variaveis.append(globals.tag_livre + i)
 
     # Determinando as folgas e suas variáveis
     n_folgas = len(list(filter(lambda x: x in globals.folgas, ' '.join(equacoes).split(' ')))) or 0
     indices_folgas = np.where(['>=' in eq or '<=' in eq for eq in equacoes])[0]
     for i in indices_folgas:
-        variaveis.append('f_' + str(i))
+        variaveis.append(globals.tag_folga + str(i))
 
     # Criar matriz A e vetor b
     A = np.zeros((n_eq, n_var + n_folgas + n_livres))
@@ -165,7 +165,19 @@ def read_data(self, file):
     for i, eq in enumerate(equacoes):
         _adicionar_restricao(self, i, eq, variaveis, A, b, c)
     # TODO: Se A não tiver restrições, colocar uma linhas de 0's
-    self.A = np.zeros((1, n_var + n_folgas + n_livres)) if n_eq == 0 else A
+    self.A = A
     self.b = [0] if n_eq == 0 else b
     self.c = c
     self.variaveis = variaveis
+
+    # Função objetivo vazia? MAX 0
+    objetivo = equacoes[0] + ' 0' if equacoes[0] == 'MAX' or equacoes[0] == 'MIN' else equacoes[0]
+    objetivo = objetivo.split()
+    # Função objetivo sem variáveis e sem restrições? Adiciona uma variável de controle
+    if len(objetivo) == 2 and objetivo[1].isdigit() and n_eq == 0:
+        variaveis.append(globals.tag_controle)
+        self.c = np.zeros(1)
+        self.A = np.zeros(1,1)
+    # Função objetivo com variáveis e sem restrições? Adiciona uma linha de zeros
+    if len(objetivo) >= 2 and len(variaveis) >= 0 and n_eq == 0:
+        self.A = np.zeros((1, n_var + n_folgas + n_livres))
