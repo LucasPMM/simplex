@@ -70,8 +70,8 @@ class Tableau:
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
         base_otima = self.base_viavel
-        for idx, variavel in self.base_viavel:
-            if globals.tag_controle in variavel:
+        for idx, variavel in enumerate(self.base_viavel):
+            if globals.tag_auxiliar in variavel:
                 disponiveis = list(filter(lambda x: x not in base_otima, self.base_viavel)) or []
                 base_otima[idx] = disponiveis[0]
         self.base_viavel = base_otima
@@ -88,13 +88,12 @@ class Tableau:
 
             # Retornando True pois o tableau já está na forma canonica
             return tableau, True
-        
+
         # colunas-2 para ignorar a coluna do vetor b e -1 para ir até a primeira coluna
         # começa da ultima para já identificar a base do problema auxiliar
         for j in range(colunas-2,linhas-2,-1):
             col_j = tableau[:, j]
-            # TODO: tratar tablaeus com zero restrições
-            candidata = np.count_nonzero(col_j[1:]) == linhas - 2 if linhas - 2 > 0 else col_j[1] != 0
+            candidata = np.count_nonzero(col_j[1:]) == 1
             if candidata:
                 i = np.nonzero(col_j[1:])[0][0] + 1
                 if i != None:
@@ -178,7 +177,7 @@ class Tableau:
 
         # Checar se já é ótimo:
         if self._check(tableau) and tem_base_trivial:
-            self.simplex_otimo(self.tableau)
+            self.simplex_otimo(tableau)
 
         # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
         if np.all(self.A == 0):

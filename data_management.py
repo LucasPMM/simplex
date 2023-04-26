@@ -177,7 +177,7 @@ def read_data(self, file):
     if len(variaveis) == 0 and n_eq == 0:
         variaveis.append(globals.tag_controle)
         self.c = np.zeros(1)
-        self.A = np.zeros((1,1))
+        self.A = np.ones((1,1))
     # Função objetivo com variáveis e sem restrições? Adiciona uma linha de zeros
     if len(variaveis) > 0 and variaveis[0] != globals.tag_controle and n_eq == 0:
         self.A = np.zeros((1, n_var + n_folgas + n_livres))
