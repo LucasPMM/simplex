@@ -65,7 +65,7 @@ class Tableau:
         linhas, colunas = self.tableau_auxiliar.shape
         otimo = self.tableau_auxiliar[linhas-1][colunas-1]
         if otimo < 0:
-            self.simplex_inviavel()
+            self.simplex_inviavel(self.tableau_auxiliar)
         print('BASE FINAL: ', self.base_viavel)
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
@@ -135,7 +135,8 @@ class Tableau:
             for k in range(1, linhas + 1):
                 b_k = tableau[k,colunas-1]
                 a_kj = tableau[k,j]
-                razao = -1 if a_kj == 0.0 else b_k / a_kj
+                # TODO: perguntar o professor se devemos avaliar o caso em que bk = 0 e akj < 0
+                razao = -1 if a_kj == 0.0 or (a_kj < 0 and b_k == 0.0) else b_k / a_kj
                 # TODO: verificar possibilidade de loopar
                 # TODO: verificar os impactos do b_k = 0
                 #  razao < menor_razao e não <= para priorizar os menores indices
@@ -153,7 +154,7 @@ class Tableau:
 
                 print('Iteração:\n ', tableau)
             else:
-                self.simplex_ilimitado()
+                self.simplex_ilimitado(tableau)
 
         return tableau
 
@@ -177,11 +178,11 @@ class Tableau:
 
         # Checar se já é ótimo:
         if self._check(tableau) and tem_base_trivial:
-            self.simplex_otimo()
+            self.simplex_otimo(self.tableau)
 
         # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
         if np.all(self.A == 0):
-            self.simplex_ilimitado()
+            self.simplex_ilimitado(self.tableau)
 
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
@@ -193,16 +194,15 @@ class Tableau:
      
         # Checar novamente se já é ótimo:
         if self._check(self.tableau) and tem_base_trivial:
-            self.simplex_otimo()
+            self.simplex_otimo(self.tableau)
         
         self.tableau = self._solve_tableau(self.tableau)
-        self.simplex_otimo()
+        self.simplex_otimo(self.tableau)
 
-    def simplex_otimo(self):
-        tableau = self.tableau
+    def simplex_otimo(self, tableau):
+        print('Tableau OTIMO:\n', tableau)
         linhas, _ = tableau.shape
         otimo = tableau[0,-1]
-        print('Tableau OTIMO:\n', tableau)
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: otimo\n")
@@ -223,10 +223,9 @@ class Tableau:
             arquivo.write(f"{certificado}")
         sys.exit()
 
-    def simplex_inviavel(self):
-        tableau = self.tableau_auxiliar
-        linhas, _ = tableau.shape
+    def simplex_inviavel(self, tableau):
         print('Tableau INVIAVEL:\n', tableau)
+        linhas, _ = tableau.shape
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: inviavel\n")
@@ -237,23 +236,29 @@ class Tableau:
             arquivo.write(f"{certificado}")
         sys.exit()
 
-    def simplex_ilimitado(self):
-        tableau = self.tableau
-        linhas, _ = tableau.shape
+    def simplex_ilimitado(self, tableau):
         print('Tableau ILIMITADO:\n', tableau)
+        linhas, colunas = tableau.shape
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: ilimitado\n")
             arquivo.write("Certificado:\n")
             certificado = ''
-            for i, variavel in enumerate(self.variaveis):
+            for _, variavel in enumerate(self.variaveis):
                 if None not in self.base_viavel:
-                    idx = self.variaveis.index(variavel)
+                    idx_col = self.variaveis.index(variavel)
+                    fail_idx = None
+                    c = tableau[0][linhas-1:colunas-1]
+                    for index, ci in enumerate(c):
+                        if ci < 0:
+                            fail_idx = index
+                            break
                     if variavel in self.base_viavel:
-                        # Variáveis básicas recebem seus valores respectivos
+                        # Variáveis básicas recebem os valores da coluna que falhou
                         idx = self.base_viavel.index(variavel)
-                        certificado += f"{tableau[idx+1,-1]} "
-                    elif tableau[0][idx+linhas-1] < 0:
+                        if fail_idx != None:
+                            certificado += f"{abs(tableau[idx+1,fail_idx+linhas-1])} "
+                    elif tableau[0][idx_col+linhas-1] < 0:
                         # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
                         certificado += "1.0 "
                     else:
@@ -263,8 +268,6 @@ class Tableau:
                     # Caso não tenha encontrado uma base viável, o certificado é composto por 0's
                     certificado += "0.0 "
 
-            for i in tableau[0][0:linhas-1]:
-                certificado += f"{i} "
             arquivo.write(f"{certificado}")
         sys.exit()
 
