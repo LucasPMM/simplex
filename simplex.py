@@ -255,22 +255,18 @@ class Tableau:
             falha_computada = False
 
             for _, variavel in enumerate(self.variaveis):
-                if None not in self.base_viavel:
-                    idx_col = self.variaveis.index(variavel)
-                    if variavel in self.base_viavel:
-                        # Variáveis básicas recebem os valores da coluna que falhou
-                        idx = self.base_viavel.index(variavel)
-                        if fail_idx != None:
-                            certificado += f"{abs(tableau[idx+1,fail_idx+linhas-1])} "
-                    elif c[idx_col] < 0 and not falha_computada:
-                        # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
-                        certificado += "1.0 "
-                        falha_computada = True
-                    else:
-                        # Variáveis não básicas entram como 0.0
-                        certificado += "0.0 "
+                idx_col = self.variaveis.index(variavel)
+                if variavel in self.base_viavel:
+                    # Variáveis básicas recebem os valores da coluna que falhou
+                    idx = self.base_viavel.index(variavel)
+                    if fail_idx != None:
+                        certificado += f"{abs(tableau[idx+1,fail_idx+linhas-1])} "
+                elif c[idx_col] < 0 and not falha_computada:
+                    # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
+                    certificado += "1.0 "
+                    falha_computada = True
                 else:
-                    # Caso não tenha encontrado uma base viável, o certificado é composto por 0's
+                    # Variáveis não básicas entram como 0.0
                     certificado += "0.0 "
 
             arquivo.write(f"{certificado}")
