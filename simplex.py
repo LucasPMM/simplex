@@ -63,8 +63,8 @@ class Tableau:
         print('Tableau auxiliar otimo:\n', self.tableau_auxiliar)
 
         linhas, colunas = self.tableau_auxiliar.shape
-        otimo = self.tableau_auxiliar[linhas-1][colunas-1]
-        if otimo < 0:
+        otimo = self.tableau_auxiliar[0][-1]
+        if not (-globals.epsilon <= otimo <= globals.epsilon):
             self.simplex_inviavel(self.tableau_auxiliar)
         print('BASE Intermediária: ', self.base_viavel)
 
