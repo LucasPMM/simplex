@@ -66,15 +66,17 @@ class Tableau:
         otimo = self.tableau_auxiliar[linhas-1][colunas-1]
         if otimo < 0:
             self.simplex_inviavel(self.tableau_auxiliar)
-        print('BASE FINAL: ', self.base_viavel)
+        print('BASE Intermediária: ', self.base_viavel)
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
         base_otima = self.base_viavel
         for idx, variavel in enumerate(self.base_viavel):
             if globals.tag_auxiliar in variavel:
-                disponiveis = list(filter(lambda x: x not in base_otima, self.base_viavel)) or []
+                disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
                 base_otima[idx] = disponiveis[0]
         self.base_viavel = base_otima
+        print('BASE FINAL: ', self.base_viavel)
+
         return base_otima
     
     def _padronizar_tableau(self, tableau, base=None):
