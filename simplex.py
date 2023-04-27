@@ -181,7 +181,7 @@ class Tableau:
 
         # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
         if np.all(self.A == 0):
-            self.simplex_ilimitado(self.tableau)
+            self.simplex_ilimitado(tableau)
 
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
@@ -243,23 +243,27 @@ class Tableau:
             arquivo.write("Status: ilimitado\n")
             arquivo.write("Certificado:\n")
             certificado = ''
+            
+            fail_idx = None
+            c = tableau[0][linhas-1:colunas-1]
+            for index, ci in enumerate(c):
+                if ci < 0:
+                    fail_idx = index
+                    break
+            falha_computada = False
+
             for _, variavel in enumerate(self.variaveis):
                 if None not in self.base_viavel:
                     idx_col = self.variaveis.index(variavel)
-                    fail_idx = None
-                    c = tableau[0][linhas-1:colunas-1]
-                    for index, ci in enumerate(c):
-                        if ci < 0:
-                            fail_idx = index
-                            break
                     if variavel in self.base_viavel:
                         # Variáveis básicas recebem os valores da coluna que falhou
                         idx = self.base_viavel.index(variavel)
                         if fail_idx != None:
                             certificado += f"{abs(tableau[idx+1,fail_idx+linhas-1])} "
-                    elif tableau[0][idx_col+linhas-1] < 0:
+                    elif c[idx_col] < 0 and not falha_computada:
                         # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
                         certificado += "1.0 "
+                        falha_computada = True
                     else:
                         # Variáveis não básicas entram como 0.0
                         certificado += "0.0 "
