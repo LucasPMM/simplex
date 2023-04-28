@@ -9,3 +9,4 @@ tag_auxiliar = 'auxiliar_'
 tag_controle = 'CONTROL_'
 
 epsilon = 0.00001
+precisao = 3

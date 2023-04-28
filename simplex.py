@@ -131,17 +131,14 @@ class Tableau:
                     break
 
             # Escolher a menor razão (positiva) de bj / aij
-            menor_razao = float('inf')
+            menor_razao = None
             i = None
             for k in range(1, linhas + 1):
                 b_k = tableau[k,colunas-1]
                 a_kj = tableau[k,j]
-                # TODO: perguntar o professor se devemos avaliar o caso em que bk = 0 e akj < 0
                 razao = -1 if a_kj == 0.0 or (a_kj < 0 and b_k == 0.0) else b_k / a_kj
-                # TODO: verificar possibilidade de loopar
-                # TODO: verificar os impactos do b_k = 0
                 #  razao < menor_razao e não <= para priorizar os menores indices
-                if razao >= 0 and (razao < menor_razao or menor_razao == None):
+                if razao >= 0 and (menor_razao == None or razao < menor_razao):
                     i = k
                     menor_razao = razao
 
@@ -207,20 +204,20 @@ class Tableau:
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: otimo\n")
-            arquivo.write(f"Objetivo: {otimo}\n")
+            arquivo.write(f"Objetivo: {round(otimo, globals.precisao)}\n")
             arquivo.write("Solucao:\n")
             solucao = ''
             for i, variavel in enumerate(self.variaveis):
                 if variavel in self.base_viavel:
                     idx = self.base_viavel.index(variavel)
-                    solucao += f"{tableau[idx+1,-1]} "
+                    solucao += f"{round(tableau[idx+1,-1], globals.precisao)} "
                 else:
                     solucao += "0.0 "
             arquivo.write(f"{solucao}\n")
             arquivo.write("Certificado:\n")
             certificado = ''
             for i in tableau[0][0:linhas-1]:
-                certificado += f"{i} "
+                certificado += f"{round(i, globals.precisao)} "
             arquivo.write(f"{certificado}")
         sys.exit()
 
@@ -233,7 +230,7 @@ class Tableau:
             arquivo.write("Certificado:\n")
             certificado = ''
             for i in tableau[0][0:linhas-1]:
-                certificado += f"{i} "
+                certificado += f"{round(i, globals.precisao)} "
             arquivo.write(f"{certificado}")
         sys.exit()
 
@@ -260,7 +257,7 @@ class Tableau:
                     # Variáveis básicas recebem os valores da coluna que falhou
                     idx = self.base_viavel.index(variavel)
                     if fail_idx != None:
-                        certificado += f"{abs(tableau[idx+1,fail_idx+linhas-1])} "
+                        certificado += f"{round(abs(tableau[idx+1,fail_idx+linhas-1]), globals.precisao)} "
                 elif c[idx_col] < 0 and not falha_computada:
                     # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
                     certificado += "1.0 "
