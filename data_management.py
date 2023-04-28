@@ -12,9 +12,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
     funcao_objetivo = False
     valor_inicial = 0.0
     is_min = False
-    # Caso seja uma condição de maior ou igual devemos inverter o sinal dos termos
-    # O sistema será da forma Ax <= b, sendo apenas necessário adicionar as folgas
-    inversor = -1 if '>=' in termos else 1
+
     for idx, termo in enumerate(termos):
         if termo in globals.comparisons:
             # Atribuir o valor 1 as folgas da equação correspondente
@@ -27,7 +25,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                     pass
 
                 if j != -1:
-                    A[i-1,j] = 1
+                    A[i-1,j] = -1 if '>=' in termos else 1
 
             valor_final = True
             fator = None
@@ -36,7 +34,6 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             if termo == '+':
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
-                    fator = fator * inversor if fator != 0.0 else fator
                     valor_inicial = -fator if is_min else fator
                     fator = None
                 proximo_negativo = False
@@ -44,7 +41,6 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             elif termo == '-':
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
-                    fator = fator * inversor if fator != 0.0 else fator
                     valor_inicial = -fator if is_min else fator
                     fator = None
                 proximo_negativo = True
@@ -66,13 +62,11 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                 if valor_final and not funcao_objetivo:
                     fator = 1 if fator == None else fator
                     fator = -fator if proximo_negativo else fator
-                    fator = fator * inversor if fator != 0.0 else fator
                     b[i-1] = fator
                     break
                 elif funcao_objetivo:
                     fator = 0 if fator == None else fator
                     fator = -fator if proximo_negativo else fator
-                    fator = fator * inversor if fator != 0.0 else fator
                     valor_inicial = -fator if is_min else fator
             continue
         elif termo in globals.functions:
@@ -81,7 +75,6 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
         elif termo in variaveis:
             fator = 1 if fator == None else fator
             fator = -fator if proximo_negativo else fator
-            fator = fator * inversor if fator != 0.0 else fator
             j = variaveis.index(termo)
 
             # Verificar se a variável e livre e, caso seja, atribuir (-1)*fator a parte negativa dela 

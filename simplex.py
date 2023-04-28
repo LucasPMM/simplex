@@ -40,8 +40,8 @@ class Tableau:
         # Coloca o tableau original na forma canonica
         linhas, colunas = self.A.shape
         tableau_dash = np.zeros((linhas, colunas + linhas + 1))
-        b_dash = self.b
-        A_dash = self.A
+        b_dash = self.b.copy()
+        A_dash = self.A.copy()
         for i, b_i in enumerate(b_dash):
             if b_i <= 0:
                 A_dash[i] = A_dash[i] * -1
@@ -201,25 +201,40 @@ class Tableau:
         print('Tableau OTIMO:\n', tableau)
         linhas, _ = tableau.shape
         otimo = tableau[0,-1]
+        solucao = []
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: otimo\n")
             arquivo.write(f"Objetivo: {round(otimo, globals.precisao)}\n")
             arquivo.write("Solucao:\n")
-            solucao = ''
             for i, variavel in enumerate(self.variaveis):
                 if variavel in self.base_viavel:
                     idx = self.base_viavel.index(variavel)
-                    solucao += f"{round(tableau[idx+1,-1], globals.precisao)} "
+                    solucao.append(tableau[idx+1,-1])
                 else:
-                    solucao += "0.0 "
-            arquivo.write(f"{solucao}\n")
+                    solucao.append(0.0)
+
+            solucao_str = ''
+            for i in solucao:
+                solucao_str += f"{round(i, globals.precisao)} "
+
+            arquivo.write(f"{solucao_str}\n")
             arquivo.write("Certificado:\n")
             certificado = ''
             for i in tableau[0][0:linhas-1]:
                 certificado += f"{round(i, globals.precisao)} "
             arquivo.write(f"{certificado}")
+
+            # Apenas para testar o certificado:
+            # valido = self.validar_otimo(tableau[0][0:linhas-1], solucao)
+            # arquivo.write(f"\nValido: {valido}")
+
         sys.exit()
+
+    def validar_otimo(self, certificado, solucao):
+        condicional_1 = np.all(self.c.T - np.dot(certificado.T, self.A) <= 0.0)
+        condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(self.c.T, solucao) <= globals.epsilon
+        return condicional_1 and condicional_2
 
     def simplex_inviavel(self, tableau):
         print('Tableau INVIAVEL:\n', tableau)
@@ -232,7 +247,17 @@ class Tableau:
             for i in tableau[0][0:linhas-1]:
                 certificado += f"{round(i, globals.precisao)} "
             arquivo.write(f"{certificado}")
+
+            # Apenas para testar o certificado:
+            # valido = self.validar_inviavel(tableau[0][0:linhas-1])
+            # arquivo.write(f"\nValido: {valido}")
+
         sys.exit()
+
+    def validar_inviavel(self, certificado):
+        condicional_1 = np.dot(certificado.T, self.A) >= 0.0
+        condicional_2 = np.dot(certificado.T, self.b) < 0.0
+        return condicional_1 and condicional_2
 
     def simplex_ilimitado(self, tableau):
         print('Tableau ILIMITADO:\n', tableau)
@@ -241,7 +266,7 @@ class Tableau:
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: ilimitado\n")
             arquivo.write("Certificado:\n")
-            certificado = ''
+            certificado = []
             
             fail_idx = None
             c = tableau[0][linhas-1:colunas-1]
@@ -257,17 +282,32 @@ class Tableau:
                     # Variáveis básicas recebem os valores da coluna que falhou
                     idx = self.base_viavel.index(variavel)
                     if fail_idx != None:
-                        certificado += f"{round(abs(tableau[idx+1,fail_idx+linhas-1]), globals.precisao)} "
+                        certificado.append(abs(tableau[idx+1,fail_idx+linhas-1]))
                 elif c[idx_col] < 0 and not falha_computada:
                     # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
-                    certificado += "1.0 "
+                    certificado.append(1.0)
                     falha_computada = True
                 else:
                     # Variáveis não básicas entram como 0.0
-                    certificado += "0.0 "
+                    certificado.append(0.0)
 
-            arquivo.write(f"{certificado}")
+            certificado_str = ''
+            for i in certificado:
+                certificado_str += f"{round(i, globals.precisao)} "
+
+            arquivo.write(f"{certificado_str}")
+
+            # Apenas para testar o certificado:
+            # valido = self.validar_ilimitado(np.array(certificado))
+            # arquivo.write(f"\nValido: {valido}")
+
         sys.exit()
+
+    def validar_ilimitado(self, certificado):
+        condicional_1 = np.all(abs(np.dot(self.A, certificado)) <= globals.epsilon)
+        condicional_2 = np.all(certificado.T >= 0.0)
+        condicional_3 = np.dot(self.c.T, certificado) > 0.0
+        return condicional_1 and condicional_2 and condicional_3
 
 if __name__ == '__main__':
     input_file = sys.argv[1]
