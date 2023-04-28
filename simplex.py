@@ -40,15 +40,17 @@ class Tableau:
         # Coloca o tableau original na forma canonica
         linhas, colunas = self.A.shape
         tableau_dash = np.zeros((linhas, colunas + linhas + 1))
+        certificados = np.zeros(linhas)
+        certificados = np.concatenate(([certificados], np.identity(linhas)), axis=0)
+
         b_dash = self.b.copy()
         A_dash = self.A.copy()
         for i, b_i in enumerate(b_dash):
             if b_i <= 0:
-                A_dash[i] = A_dash[i] * -1
-                b_dash[i] = b_dash[i] * -1
+                A_dash[i] *= -1
+                b_dash[i] *= -1
+                certificados[i + 1] *= -1
 
-        certificados = np.zeros(linhas)
-        certificados = np.concatenate(([certificados], np.identity(linhas)), axis=0)
         # Como o vetor c é invertido no tableau, colocamos 1's no lugar dos -1's
         c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (1)], np.array(self.valor_inicial).reshape(-1, 1)), axis=1)
         tableau_dash = np.concatenate((A_dash, np.identity(linhas), np.array(b_dash).reshape(-1, 1)), axis=1)
@@ -216,7 +218,7 @@ class Tableau:
 
             solucao_str = ''
             for i in solucao:
-                solucao_str += f"{round(i, globals.precisao)} "
+                solucao_str += f"{round(i if i != 0 else 0.0, globals.precisao)} "
 
             arquivo.write(f"{solucao_str}\n")
             arquivo.write("Certificado:\n")
@@ -255,7 +257,7 @@ class Tableau:
         sys.exit()
 
     def validar_inviavel(self, certificado):
-        condicional_1 = np.dot(certificado.T, self.A) >= 0.0
+        condicional_1 = np.all(np.dot(certificado.T, self.A) >= 0.0)
         condicional_2 = np.dot(certificado.T, self.b) < 0.0
         return condicional_1 and condicional_2
 

@@ -29,6 +29,7 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
 
             valor_final = True
             fator = None
+            proximo_negativo = False
 
         elif termo in globals.operations:
             if termo == '+':
