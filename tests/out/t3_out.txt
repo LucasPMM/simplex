@@ -1,6 +1,6 @@
 Status: otimo
-Objetivo: 17.8
+Objetivo: 7.4
 Solucao:
-1.6 0.0 0.0 5.4 
+6.8 0.0 0.0 0.2 
 Certificado:
 1.8 0.4 

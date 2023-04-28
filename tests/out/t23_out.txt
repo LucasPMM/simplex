@@ -1,0 +1,6 @@
+Status: otimo
+Objetivo: 5.0
+Solucao:
+1.0 3.0 0.0 4.0 0.0 
+Certificado:
+0.667 0.0 0.333 
