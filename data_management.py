@@ -97,13 +97,30 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             fator = None
             continue
     if funcao_objetivo:
-        print('VALOR INICIAL', valor_inicial)
+        globals.show('VALOR INICIAL', valor_inicial)
         self.valor_inicial = valor_inicial
 
+def _conta_variavel(equacao):
+    contador = 0
+    for termo in equacao.split():
+        if termo not in [*globals.comparisons, *globals.functions, *globals.operations] and not termo.isdigit():
+            contador += 1
+
+    return contador
+
 def read_data(self, file):
-    # ler arquivo de entrada e armazenar equações em lista
+    # Ler arquivo de entrada e armazenar equações em lista
     with open(file, 'r') as f:
         equacoes = [linha.strip() for linha in f.readlines()]
+
+    # Identificar restrições de igualdade de uma variável só e trocar por duas de >= e <=
+    for i, eq in enumerate(equacoes.copy()):
+        if '==' in eq and _conta_variavel(eq) == 1:
+            aux1 = eq.replace('==', '<=')
+            aux2 = eq.replace('==', '>=')
+            equacoes.remove(eq)
+            equacoes.insert(i, aux1)
+            equacoes.insert(i, aux2)
 
     # identificar variáveis presentes nas equações
     variaveis = OrderedDict()
@@ -146,19 +163,19 @@ def read_data(self, file):
     b = np.zeros(n_eq)
 
     # ====== TEST INPUT ====== #
-    print('*******************************************')
-    print("Variáveis: ", variaveis)
-    print("Função objetivo: ", equacoes[0])
-    print("Equações: ", equacoes)
-    print("Não negatividade: ", nao_negatividade)
-    print("Número de folgas: ", n_folgas)
-    print("Número de variáveis livres: ", n_livres)
-    print('*******************************************')
+    globals.show('*******************************************')
+    globals.show("Variáveis: ", variaveis)
+    globals.show("Função objetivo: ", equacoes[0])
+    globals.show("Equações: ", equacoes)
+    globals.show("Não negatividade: ", nao_negatividade)
+    globals.show("Número de folgas: ", n_folgas)
+    globals.show("Número de variáveis livres: ", n_livres)
+    globals.show('*******************************************')
     # ======================== #
 
     for i, eq in enumerate(equacoes):
         _adicionar_restricao(self, i, eq, variaveis, A, b, c)
-    # TODO: Se A não tiver restrições, colocar uma linhas de 0's
+
     self.A = A
     self.b = [0] if n_eq == 0 else b
     self.c = c

@@ -57,18 +57,18 @@ class Tableau:
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         tableau = np.concatenate((certificados, tableau), axis=1)
 
-        print('Tableau auxiliar:\n', tableau)
+        globals.show('Tableau auxiliar:\n', tableau)
         tableau, _ = self._padronizar_tableau(tableau)
-        print('Tableau auxiliar padronizado:\n', tableau)
+        globals.show('Tableau auxiliar padronizado:\n', tableau)
 
         self.tableau_auxiliar = self._solve_tableau(tableau)
-        print('Tableau auxiliar otimo:\n', self.tableau_auxiliar)
+        globals.show('Tableau auxiliar otimo:\n', self.tableau_auxiliar)
 
         linhas, colunas = self.tableau_auxiliar.shape
         otimo = self.tableau_auxiliar[0][-1]
         if not (-globals.epsilon <= otimo <= globals.epsilon):
             self.simplex_inviavel(self.tableau_auxiliar)
-        print('BASE Intermediária: ', self.base_viavel)
+        globals.show('BASE Intermediária: ', self.base_viavel)
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
         base_otima = self.base_viavel
@@ -77,7 +77,7 @@ class Tableau:
                 disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
                 base_otima[idx] = disponiveis[0]
         self.base_viavel = base_otima
-        print('BASE FINAL: ', self.base_viavel)
+        globals.show('BASE FINAL: ', self.base_viavel)
 
         return base_otima
     
@@ -109,7 +109,7 @@ class Tableau:
 
                         entra_na_base = self.variaveis_auxiliares[j-(linhas-1)]
                         sai_da_base = self.base_viavel[i-1]
-                        print('Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
+                        globals.show('Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
                         self.base_viavel[i-1] = entra_na_base
 
                     except IndexError:
@@ -149,10 +149,10 @@ class Tableau:
                 tableau = self._pivotear(tableau, i,j)
                 entra_na_base = self.variaveis_auxiliares[j-linhas]
                 sai_da_base = self.base_viavel[i-1]
-                print('Solving: Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
+                globals.show('Solving: Sai da base: ', sai_da_base, ". Entra na base: ", entra_na_base)
                 self.base_viavel[i-1] = entra_na_base
 
-                print('Iteração:\n ', tableau)
+                globals.show('Iteração:\n ', tableau)
             else:
                 self.simplex_ilimitado(tableau)
 
@@ -171,10 +171,10 @@ class Tableau:
         # Montando o tableau estendido ANTES colocá-lo na forma canônica
         tableau = np.concatenate((certificados, tableau), axis=1)
        
-        print('Tableau inicial:\n', tableau)
+        globals.show('Tableau inicial:\n', tableau)
         tableau, tem_base_trivial = self._padronizar_tableau(tableau)
-        print('Tableau padronizado:\n', tableau)
-        print('Base trivial:\n', tem_base_trivial, self.base_viavel)
+        globals.show('Tableau padronizado:\n', tableau)
+        globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
 
         # Checar se já é ótimo:
         if self._check(tableau) and tem_base_trivial:
@@ -190,7 +190,7 @@ class Tableau:
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
-        print('Tableau na base viável:\n', t.tableau)
+        globals.show('Tableau na base viável:\n', t.tableau)
      
         # Checar novamente se já é ótimo:
         if self._check(self.tableau) and tem_base_trivial:
@@ -200,7 +200,7 @@ class Tableau:
         self.simplex_otimo(self.tableau)
 
     def simplex_otimo(self, tableau):
-        print('Tableau OTIMO:\n', tableau)
+        globals.show('Tableau OTIMO:\n', tableau)
         linhas, _ = tableau.shape
         otimo = tableau[0,-1]
         solucao = []
@@ -228,18 +228,19 @@ class Tableau:
             arquivo.write(f"{certificado}")
 
             # Apenas para testar o certificado:
-            # valido = self.validar_otimo(tableau[0][0:linhas-1], solucao)
-            # arquivo.write(f"\nValido: {valido}")
+            self.validar_otimo(tableau[0][0:linhas-1], solucao)
 
         sys.exit()
 
     def validar_otimo(self, certificado, solucao):
         condicional_1 = np.all(self.c.T - np.dot(certificado.T, self.A) <= 0.0)
         condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(self.c.T, solucao) <= globals.epsilon
-        return condicional_1 and condicional_2
+        valido = condicional_1 and condicional_2
+        print('Certificado válido: ', valido)
+        return valido
 
     def simplex_inviavel(self, tableau):
-        print('Tableau INVIAVEL:\n', tableau)
+        globals.show('Tableau INVIAVEL:\n', tableau)
         linhas, _ = tableau.shape
         
         with open(self.output_file, "w") as arquivo:
@@ -251,18 +252,19 @@ class Tableau:
             arquivo.write(f"{certificado}")
 
             # Apenas para testar o certificado:
-            # valido = self.validar_inviavel(tableau[0][0:linhas-1])
-            # arquivo.write(f"\nValido: {valido}")
+            self.validar_inviavel(tableau[0][0:linhas-1])
 
         sys.exit()
 
     def validar_inviavel(self, certificado):
         condicional_1 = np.all(np.dot(certificado.T, self.A) >= 0.0)
         condicional_2 = np.dot(certificado.T, self.b) < 0.0
-        return condicional_1 and condicional_2
+        valido = condicional_1 and condicional_2
+        print('Certificado válido: ', valido)
+        return valido
 
     def simplex_ilimitado(self, tableau):
-        print('Tableau ILIMITADO:\n', tableau)
+        globals.show('Tableau ILIMITADO:\n', tableau)
         linhas, colunas = tableau.shape
         
         with open(self.output_file, "w") as arquivo:
@@ -300,8 +302,7 @@ class Tableau:
             arquivo.write(f"{certificado_str}")
 
             # Apenas para testar o certificado:
-            # valido = self.validar_ilimitado(np.array(certificado))
-            # arquivo.write(f"\nValido: {valido}")
+            self.validar_ilimitado(np.array(certificado))
 
         sys.exit()
 
@@ -309,7 +310,9 @@ class Tableau:
         condicional_1 = np.all(abs(np.dot(self.A, certificado)) <= globals.epsilon)
         condicional_2 = np.all(certificado.T >= 0.0)
         condicional_3 = np.dot(self.c.T, certificado) > 0.0
-        return condicional_1 and condicional_2 and condicional_3
+        valido = condicional_1 and condicional_2 and condicional_3
+        print('Certificado válido: ', valido)
+        return valido
 
 if __name__ == '__main__':
     input_file = sys.argv[1]
@@ -319,9 +322,9 @@ if __name__ == '__main__':
     t.output_file = output_file
     read_data(t, input_file)
     
-    print(t.variaveis)
-    print('c: ', t.c)
-    print('A: ', t.A)
-    print('b: ', t.b)
+    globals.show(t.variaveis)
+    globals.show('c: ', t.c)
+    globals.show('A: \n', t.A)
+    globals.show('b: ', t.b)
 
     t.solve()
