@@ -11,6 +11,7 @@ class Tableau:
         self.valor_inicial = 0.0
         self.variaveis = []
         self.output_file = None
+        self.minimizacao = False
 
         self.tableau_auxiliar = None
         self.variaveis_auxiliares = []
@@ -71,7 +72,7 @@ class Tableau:
         globals.show('BASE Intermediária: ', self.base_viavel)
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
-        base_otima = self.base_viavel
+        base_otima = self.base_viavel.copy()
         for idx, variavel in enumerate(self.base_viavel):
             if globals.tag_auxiliar in variavel:
                 disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
@@ -89,7 +90,9 @@ class Tableau:
             for idx, variavel in enumerate(base):
                 j = self.variaveis_auxiliares.index(variavel)
                 tableau = self._pivotear(tableau, idx + 1, j + linhas-1)
-
+            # TODO: resolver problemas de minimizacao
+            # if self.minimizacao:
+            #     tableau[0] *= -1
             # Retornando True pois o tableau já está na forma canonica
             return tableau, True
 
@@ -135,10 +138,17 @@ class Tableau:
             # Escolher a menor razão (positiva) de bj / aij
             menor_razao = None
             i = None
+
+            entra_na_base = None
+            sai_da_base = None
+
             for k in range(1, linhas + 1):
                 b_k = tableau[k,colunas-1]
                 a_kj = tableau[k,j]
                 razao = -1 if a_kj == 0.0 or (a_kj < 0 and b_k == 0.0) else b_k / a_kj
+           
+                entra_na_base = self.variaveis_auxiliares[j-linhas]
+                sai_da_base = self.base_viavel[k-1]
                 #  razao < menor_razao e não <= para priorizar os menores indices
                 if razao >= 0 and (menor_razao == None or razao < menor_razao):
                     i = k
@@ -175,6 +185,7 @@ class Tableau:
         tableau, tem_base_trivial = self._padronizar_tableau(tableau)
         globals.show('Tableau padronizado:\n', tableau)
         globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
+        base_trivial = self.base_viavel
 
         # Checar se já é ótimo:
         if self._check(tableau) and tem_base_trivial:
@@ -187,15 +198,17 @@ class Tableau:
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
         base = self._problema_auxiliar()
+        base = base_trivial if tem_base_trivial else base
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
+        self.base_viavel = base
         globals.show('Tableau na base viável:\n', t.tableau)
      
         # Checar novamente se já é ótimo:
         if self._check(self.tableau) and tem_base_trivial:
             self.simplex_otimo(self.tableau)
-        
+
         self.tableau = self._solve_tableau(self.tableau)
         self.simplex_otimo(self.tableau)
 
@@ -233,10 +246,12 @@ class Tableau:
         sys.exit()
 
     def validar_otimo(self, certificado, solucao):
-        condicional_1 = np.all(self.c.T - np.dot(certificado.T, self.A) <= 0.0)
-        condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(self.c.T, solucao) <= globals.epsilon
+        # TODO: conferir essa verificação para minimização e replicar nos outros validadores
+        c = -self.c.T if self.minimizacao else self.c.T
+        condicional_1 = np.all(c - np.dot(certificado.T, self.A) <= globals.epsilon)
+        condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(c, solucao) <= globals.epsilon
         valido = condicional_1 and condicional_2
-        print('Certificado válido: ', valido)
+        print('OTIMO:    ', valido)
         return valido
 
     def simplex_inviavel(self, tableau):
@@ -260,7 +275,7 @@ class Tableau:
         condicional_1 = np.all(np.dot(certificado.T, self.A) >= 0.0)
         condicional_2 = np.dot(certificado.T, self.b) < 0.0
         valido = condicional_1 and condicional_2
-        print('Certificado válido: ', valido)
+        print('INVIÁVEL: ', valido)
         return valido
 
     def simplex_ilimitado(self, tableau):
@@ -311,7 +326,7 @@ class Tableau:
         condicional_2 = np.all(certificado.T >= 0.0)
         condicional_3 = np.dot(self.c.T, certificado) > 0.0
         valido = condicional_1 and condicional_2 and condicional_3
-        print('Certificado válido: ', valido)
+        print('ILIMITADO:', valido)
         return valido
 
 if __name__ == '__main__':

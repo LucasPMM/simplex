@@ -11,7 +11,6 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
     valor_final = False
     funcao_objetivo = False
     valor_inicial = 0.0
-    is_min = False
 
     for idx, termo in enumerate(termos):
         if termo in globals.comparisons:
@@ -35,14 +34,14 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
             if termo == '+':
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
-                    valor_inicial = -fator if is_min else fator
+                    valor_inicial = fator
                     fator = None
                 proximo_negativo = False
                 continue
             elif termo == '-':
                 if fator != None:
                     fator = -fator if proximo_negativo else fator
-                    valor_inicial = -fator if is_min else fator
+                    valor_inicial = fator
                     fator = None
                 proximo_negativo = True
                 continue
@@ -68,10 +67,10 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                 elif funcao_objetivo:
                     fator = 0 if fator == None else fator
                     fator = -fator if proximo_negativo else fator
-                    valor_inicial = -fator if is_min else fator
+                    valor_inicial = fator
             continue
         elif termo in globals.functions:
-            is_min = True if termo == 'MIN' else False
+            self.minimizacao = True if termo == 'MIN' else False
             funcao_objetivo = True
         elif termo in variaveis:
             fator = 1 if fator == None else fator
@@ -86,7 +85,6 @@ def _adicionar_restricao(self, i, eq, variaveis, A, b, c):
                 pass
 
             if funcao_objetivo:
-                fator = -fator if is_min else fator
                 c[j] = fator
                 if k != -1:
                     c[k] = -fator

@@ -7,4 +7,5 @@ num_files = len([f for f in os.listdir(path_input) if os.path.isfile(os.path.joi
 for i in range(num_files):
     entradas = f'{path_input}t{i+1}_in.txt'
     saidas = f'{path_output}t{i+1}_out.txt'
+    print('==> T', i+1)
     os.system(f"python3 simplex.py {entradas} {saidas}")
