@@ -2,6 +2,7 @@ import numpy as np
 import sys
 from data_management import read_data
 import globals
+import random
 
 class Tableau:
     def __init__(self):
@@ -47,7 +48,7 @@ class Tableau:
         b_dash = self.b.copy()
         A_dash = self.A.copy()
         for i, b_i in enumerate(b_dash):
-            if b_i <= 0:
+            if b_i < 0:
                 A_dash[i] *= -1
                 b_dash[i] *= -1
                 certificados[i + 1] *= -1
@@ -73,14 +74,34 @@ class Tableau:
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
         base_otima = self.base_viavel.copy()
-        for idx, variavel in enumerate(self.base_viavel):
-            if globals.tag_auxiliar in variavel:
-                disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
-                base_otima[idx] = disponiveis[0]
-        self.base_viavel = base_otima
+        base_final = base_otima
+        for i, valor in enumerate(base_final):
+            if globals.tag_auxiliar in valor:
+                base_final[i] = None
+
+        while None in base_final:
+            for idx, variavel in enumerate(self.base_viavel):
+                if globals.tag_auxiliar in variavel:
+                    disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
+                    disponiveis = random.sample(disponiveis, len(disponiveis))
+
+                    disponiveis_validas = []
+                    for disponivel in disponiveis:
+                        index = self.variaveis.index(disponivel)
+                        valor_no_tableau = tableau[idx+1][index+tableau.shape[0]-1]
+                        if not -globals.epsilon <= valor_no_tableau <= globals.epsilon:
+                            disponiveis_validas.append(disponivel)
+
+                    if len(disponiveis_validas) == 0:
+                        for i, valor in enumerate(base_final):
+                            if valor != None and globals.tag_auxiliar in valor:
+                                base_final[i] = None
+                        continue
+                    base_final[idx] = disponiveis_validas[0]
+        self.base_viavel = base_final
         globals.show('BASE FINAL: ', self.base_viavel)
 
-        return base_otima
+        return base_final
     
     def _padronizar_tableau(self, tableau, base=None):
         linhas, colunas = tableau.shape
@@ -90,9 +111,7 @@ class Tableau:
             for idx, variavel in enumerate(base):
                 j = self.variaveis_auxiliares.index(variavel)
                 tableau = self._pivotear(tableau, idx + 1, j + linhas-1)
-            # TODO: resolver problemas de minimizacao
-            # if self.minimizacao:
-            #     tableau[0] *= -1
+
             # Retornando True pois o tableau já está na forma canonica
             return tableau, True
 
@@ -185,10 +204,9 @@ class Tableau:
         tableau, tem_base_trivial = self._padronizar_tableau(tableau)
         globals.show('Tableau padronizado:\n', tableau)
         globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
-        base_trivial = self.base_viavel
 
-        # Checar se já é ótimo:
-        if self._check(tableau) and tem_base_trivial:
+        # Checar se já é ótimo (b > 0):
+        if self._check(tableau) and tem_base_trivial and np.all(tableau[:,-1][1:] >= 0):
             self.simplex_otimo(tableau)
 
         # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
@@ -198,7 +216,8 @@ class Tableau:
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
         base = self._problema_auxiliar()
-        base = base_trivial if tem_base_trivial else base
+        if self.minimizacao:
+            tableau[0] *= -1
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
@@ -297,6 +316,7 @@ class Tableau:
 
             for _, variavel in enumerate(self.variaveis):
                 idx_col = self.variaveis.index(variavel)
+
                 if variavel in self.base_viavel:
                     # Variáveis básicas recebem os valores da coluna que falhou
                     idx = self.base_viavel.index(variavel)
