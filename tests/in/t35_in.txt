@@ -1,0 +1,7 @@
+MAX - var_1 + 3 * var_2 + var_33 + 2 * var4
+var_1 + 2 * var_2 - 2 * var_33 == 2
+0 * var_1 + var_2 + 3 * var_33 + var4 == 5
+var_1 >= 0
+var_2 >= 0
+var_33 >= 0
+var4 >= 0
