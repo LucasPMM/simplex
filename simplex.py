@@ -183,6 +183,9 @@ class Tableau:
 
                 globals.show('Iteração:\n ', tableau)
             else:
+                if self.minimizacao:
+                    tableau[0] *= -1
+
                 self.simplex_ilimitado(tableau)
 
         return tableau
@@ -226,9 +229,13 @@ class Tableau:
      
         # Checar novamente se já é ótimo:
         if self._check(self.tableau) and tem_base_trivial:
+            if self.minimizacao:
+                tableau[0] *= -1
             self.simplex_otimo(self.tableau)
 
         self.tableau = self._solve_tableau(self.tableau)
+        if self.minimizacao:
+            tableau[0] *= -1
         self.simplex_otimo(self.tableau)
 
     def simplex_otimo(self, tableau):
@@ -266,9 +273,10 @@ class Tableau:
 
     def validar_otimo(self, certificado, solucao):
         # TODO: conferir essa verificação para minimização e replicar nos outros validadores
-        c = -self.c.T if self.minimizacao else self.c.T
-        condicional_1 = np.all(c - np.dot(certificado.T, self.A) <= globals.epsilon)
-        condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(c, solucao) <= globals.epsilon
+        inversor = -1 if self.minimizacao else 1
+        c = inversor * self.c.T
+        condicional_1 = np.all(c - np.dot(inversor * certificado.T, self.A) <= globals.epsilon)
+        condicional_2 = -globals.epsilon <= np.dot(inversor * certificado.T, self.b) - np.dot(c, solucao) <= globals.epsilon
         valido = condicional_1 and condicional_2
         print('OTIMO:    ', valido)
         return valido
