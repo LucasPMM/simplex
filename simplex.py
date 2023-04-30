@@ -54,7 +54,7 @@ class Tableau:
                 certificados[i + 1] *= -1
 
         # Como o vetor c é invertido no tableau, colocamos 1's no lugar dos -1's
-        c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (1)], np.array(self.valor_inicial).reshape(-1, 1)), axis=1)
+        c_dash = np.concatenate(([np.zeros(len(self.c))], [np.ones(linhas) * (1)], np.array(0.0).reshape(-1, 1)), axis=1)
         tableau_dash = np.concatenate((A_dash, np.identity(linhas), np.array(b_dash).reshape(-1, 1)), axis=1)
         tableau = np.concatenate((c_dash, tableau_dash), axis=0)
         tableau = np.concatenate((certificados, tableau), axis=1)
@@ -183,9 +183,6 @@ class Tableau:
 
                 globals.show('Iteração:\n ', tableau)
             else:
-                if self.minimizacao:
-                    tableau[0] *= -1
-
                 self.simplex_ilimitado(tableau)
 
         return tableau
@@ -208,10 +205,6 @@ class Tableau:
         globals.show('Tableau padronizado:\n', tableau)
         globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
 
-        # Checar se já é ótimo (b > 0):
-        if self._check(tableau) and tem_base_trivial and np.all(tableau[:,-1][1:] >= 0):
-            self.simplex_otimo(tableau)
-
         # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
         if np.all(self.A == 0):
             self.simplex_ilimitado(tableau)
@@ -219,23 +212,15 @@ class Tableau:
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
         base = self._problema_auxiliar()
-        if self.minimizacao:
-            tableau[0] *= -1
 
         tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
-        self.base_viavel = base
+
         globals.show('Tableau na base viável:\n', t.tableau)
      
-        # Checar novamente se já é ótimo:
-        if self._check(self.tableau) and tem_base_trivial:
-            if self.minimizacao:
-                tableau[0] *= -1
-            self.simplex_otimo(self.tableau)
-
         self.tableau = self._solve_tableau(self.tableau)
         if self.minimizacao:
-            tableau[0] *= -1
+            tableau[0][-1] *= -1
         self.simplex_otimo(self.tableau)
 
     def simplex_otimo(self, tableau):
@@ -246,7 +231,9 @@ class Tableau:
         
         with open(self.output_file, "w") as arquivo:
             arquivo.write("Status: otimo\n")
-            arquivo.write(f"Objetivo: {round(otimo, globals.precisao)}\n")
+            otimo = round(otimo, globals.precisao)
+            otimo = 0.0 if otimo == -0.0 else otimo
+            arquivo.write(f"Objetivo: {otimo}\n")
             arquivo.write("Solucao:\n")
             for i, variavel in enumerate(self.variaveis):
                 if variavel in self.base_viavel:
@@ -264,6 +251,7 @@ class Tableau:
             certificado = ''
             for i in tableau[0][0:linhas-1]:
                 certificado += f"{round(i, globals.precisao)} "
+            certificado = certificado.replace('-0.0', '0.0')
             arquivo.write(f"{certificado}")
 
             # Apenas para testar o certificado:
@@ -272,11 +260,9 @@ class Tableau:
         sys.exit()
 
     def validar_otimo(self, certificado, solucao):
-        # TODO: conferir essa verificação para minimização e replicar nos outros validadores
-        inversor = -1 if self.minimizacao else 1
-        c = inversor * self.c.T
-        condicional_1 = np.all(c - np.dot(inversor * certificado.T, self.A) <= globals.epsilon)
-        condicional_2 = -globals.epsilon <= np.dot(inversor * certificado.T, self.b) - np.dot(c, solucao) <= globals.epsilon
+        c = self.c.T
+        condicional_1 = np.all(c - np.dot(certificado.T, self.A) <= globals.epsilon)
+        condicional_2 = -globals.epsilon <= np.dot(certificado.T, self.b) - np.dot(c, solucao) <= globals.epsilon
         valido = condicional_1 and condicional_2
         print('OTIMO:    ', valido)
         return valido
@@ -350,9 +336,10 @@ class Tableau:
         sys.exit()
 
     def validar_ilimitado(self, certificado):
+        c = self.c.T
         condicional_1 = np.all(abs(np.dot(self.A, certificado)) <= globals.epsilon)
         condicional_2 = np.all(certificado.T >= 0.0)
-        condicional_3 = np.dot(self.c.T, certificado) > 0.0
+        condicional_3 = np.dot(c, certificado) > 0.0
         valido = condicional_1 and condicional_2 and condicional_3
         print('ILIMITADO:', valido)
         return valido

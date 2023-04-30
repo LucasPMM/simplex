@@ -192,7 +192,10 @@ def read_data(self, file):
         self.A = np.zeros((1, n_var + n_folgas + n_livres))
         
     auxiliares = []
-    for i in range(n_eq):  
+    for i in range(n_eq if n_eq > 0 else 1):  
         auxiliares.append(f"{globals.tag_auxiliar}" + str(i+1))
     self.variaveis_auxiliares = [*variaveis, *auxiliares]
     self.base_viavel = [None] * (n_eq or 1)
+    if self.minimizacao:
+        self.c *= -1
+        self.valor_inicial *= -1

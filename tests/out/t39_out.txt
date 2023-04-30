@@ -1,5 +1,5 @@
 Status: otimo
-Objetivo: 9.0
+Objetivo: 30.0
 Solucao:
 0.333 0.333 0.0 0.0 
 Certificado:
