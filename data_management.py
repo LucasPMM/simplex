@@ -129,11 +129,32 @@ def read_data(self, file):
                 variaveis[result] = None
 
     # Separando as restrições de não negatividade 
-    nao_negatividade = list(filter(lambda x: (f"{x} >= 0" in equacoes or f"- {x} <= 0" in equacoes), variaveis)) or []
-    nao_negatividade = list(map(lambda x: f"{x} >= 0" if f"{x} >= 0" in equacoes else f"- {x} <= 0", nao_negatividade))
+    restricoes_com_uma_variavel = list(filter(lambda x: _conta_variavel(x) == 1, equacoes))
+    candidatas = []
+    for candidata in restricoes_com_uma_variavel:
+        # * Considerar como não negatividade:
+        # x >= 0 || - x <= 0
+        # -x <= -|| x >= +
+        tokens = candidata.split()
+        lados = re.split(r"(<=|>=)", candidata)
+        zero = [' 0', ' - 0']
+        if ('>=' in tokens and ('-' not in candidata)) or ('<=' in tokens and ('-' in lados[0] and ('-' in lados[-1] or lados[-1] in zero))):
+            candidatas.append(candidata)
+
+    nao_negatividade = []
+    remover_da_pl = []
+
+    for x in variaveis:
+        for equacao in candidatas:
+            if x in equacao and x not in nao_negatividade:
+                nao_negatividade.append(x)
+                remover_da_pl.append(f"{x} >= 0")
+                remover_da_pl.append(f"{x} >= - 0")
+                remover_da_pl.append(f"- {x} <= 0")
+                remover_da_pl.append(f"- {x} <= - 0")
 
     # Tirando as restrições de não negatividade das restrições normais
-    equacoes = list(filter(lambda x: x not in nao_negatividade, equacoes)) or []
+    equacoes = list(filter(lambda x: x not in remover_da_pl, equacoes)) or []
 
     variaveis = list(variaveis.keys())
 
@@ -141,10 +162,11 @@ def read_data(self, file):
     n_eq = (len(equacoes) - 1) or 0
     n_var = len(variaveis) or 0
 
-    # TODO: Controlar melhor as variáveis livres
-    # * Considerar como não negatividade:
-    #   x >= 0 (ok) || - x <= 0 (ok) || -x <= NEGATIVO (?) || x >= POSITIVO (?)
-    variaveis_livres = list(filter(lambda x: (f"{x} >= 0" not in nao_negatividade and f"- {x} <= 0" not in nao_negatividade), variaveis))
+    variaveis_livres = []
+    for x in variaveis:
+        if x not in nao_negatividade and x not in variaveis_livres:
+            variaveis_livres.append(x)
+
     n_livres = len(variaveis_livres) or 0
     for i in variaveis_livres:
         variaveis.append(globals.tag_livre + i)
