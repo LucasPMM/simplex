@@ -3,6 +3,7 @@ import sys
 from data_management import read_data
 import globals
 import random
+from itertools import permutations
 
 class Tableau:
     def __init__(self):
@@ -16,6 +17,7 @@ class Tableau:
 
         self.tableau_auxiliar = None
         self.variaveis_auxiliares = []
+        self.falha_na_base = False
 
         self.base_viavel = []
         self.tableau = None
@@ -30,6 +32,8 @@ class Tableau:
 
     def _pivotear(self, tableau, i, j):
         n = tableau.shape[0]
+        if -globals.epsilon <= tableau[i, j] <= globals.epsilon:
+            self.falha_na_base = True
         tableau[i] = (tableau[i] / tableau[i, j]) if (tableau[i, j] != 0).any() else 0.0 # divide a linha i pela entrada ij
         for k in range(n):
             if k == i:
@@ -108,9 +112,29 @@ class Tableau:
         identidade = np.identity(linhas-1)
 
         if base != None:
+            tableau_inicial = tableau.copy()
+
             for idx, variavel in enumerate(base):
                 j = self.variaveis_auxiliares.index(variavel)
-                tableau = self._pivotear(tableau, idx + 1, j + linhas-1)
+                tableau = self._pivotear(tableau.copy(), idx + 1, j + linhas-1)
+
+            if self.falha_na_base:
+                combinacoes = list(permutations(base))
+                for combinacao in combinacoes:
+                    tableau = tableau_inicial.copy()
+                    for variavel in combinacao:
+                        self.falha_na_base = False
+
+                        idx = base.index(variavel)
+                        j = self.variaveis_auxiliares.index(variavel)
+                        tableau = self._pivotear(tableau.copy(), idx + 1, j + linhas-1)
+
+                        if self.falha_na_base:
+                            break
+
+                    if not self.falha_na_base:
+                        globals.show('Pivotei na combinação', combinacao)
+                        return tableau, True
 
             # Retornando True pois o tableau já está na forma canonica
             return tableau, True
@@ -138,7 +162,7 @@ class Tableau:
                         pass
                 if identidade.shape[1] == 0:
                     break
-        tem_base_trivial = identidade.shape[1] == 0
+        tem_base_trivial = identidade.shape[1] == 0 and all(elemento >= -globals.epsilon for elemento in self.b)
         return tableau, tem_base_trivial
 
     def _solve_tableau(self, tableau):
@@ -212,15 +236,17 @@ class Tableau:
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
         base = self._problema_auxiliar()
-
-        tableau, tem_base_trivial = self._padronizar_tableau(tableau, base)
         self.tableau = tableau
+        tableau, tem_base_trivial = self._padronizar_tableau(tableau.copy(), base)
+       
+        if not self.falha_na_base:
+            self.tableau = tableau
 
         globals.show('Tableau na base viável:\n', t.tableau)
      
         self.tableau = self._solve_tableau(self.tableau)
         if self.minimizacao:
-            tableau[0][-1] *= -1
+            self.tableau[0][-1] *= -1
         self.simplex_otimo(self.tableau)
 
     def simplex_otimo(self, tableau):
