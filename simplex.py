@@ -2,7 +2,6 @@ import numpy as np
 import sys
 from data_management import read_data
 import globals
-import random
 from itertools import permutations
 
 class Tableau:
@@ -18,6 +17,7 @@ class Tableau:
         self.tableau_auxiliar = None
         self.variaveis_auxiliares = []
         self.falha_na_base = False
+        self.finalizado = False
 
         self.base_viavel = []
         self.tableau = None
@@ -74,6 +74,7 @@ class Tableau:
         otimo = self.tableau_auxiliar[0][-1]
         if not (-globals.epsilon <= otimo <= globals.epsilon):
             self.simplex_inviavel(self.tableau_auxiliar)
+            return None
         globals.show('BASE Intermediária: ', self.base_viavel)
 
         # Se usa alguma variável auxiliar => substituir por alguma não básica
@@ -83,17 +84,17 @@ class Tableau:
             if globals.tag_auxiliar in valor:
                 base_final[i] = None
 
-        while None in base_final:
+        candiadatas = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
+        combinacoes = list(permutations(candiadatas))
+
+        for disponiveis in combinacoes:
             for idx, variavel in enumerate(self.base_viavel):
                 if globals.tag_auxiliar in variavel:
-                    disponiveis = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
-                    disponiveis = random.sample(disponiveis, len(disponiveis))
-
                     disponiveis_validas = []
                     for disponivel in disponiveis:
                         index = self.variaveis.index(disponivel)
                         valor_no_tableau = tableau[idx+1][index+tableau.shape[0]-1]
-                        if not -globals.epsilon <= valor_no_tableau <= globals.epsilon:
+                        if not -globals.epsilon <= valor_no_tableau <= globals.epsilon and disponivel not in base_final:
                             disponiveis_validas.append(disponivel)
 
                     if len(disponiveis_validas) == 0:
@@ -102,8 +103,14 @@ class Tableau:
                                 base_final[i] = None
                         continue
                     base_final[idx] = disponiveis_validas[0]
+            if None not in base_final:
+                break
         self.base_viavel = base_final
         globals.show('BASE FINAL: ', self.base_viavel)
+
+        if None in self.base_viavel:
+            self.simplex_ilimitado(self.tableau)
+            return None
 
         return base_final
     
@@ -208,6 +215,7 @@ class Tableau:
                 globals.show('Iteração:\n ', tableau)
             else:
                 self.simplex_ilimitado(tableau)
+                return None
 
         return tableau
 
@@ -229,14 +237,12 @@ class Tableau:
         globals.show('Tableau padronizado:\n', tableau)
         globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
 
-        # Checar se A = 0 => problema ilimitado: (como já foi checada a otimalidade, só pode ser ilimitada)
-        if np.all(self.A == 0):
-            self.simplex_ilimitado(tableau)
-
         # Setar as novas variáveis como a base da PL auxiliar
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
-        base = self._problema_auxiliar()
         self.tableau = tableau
+        base = self._problema_auxiliar()
+        if self.finalizado:
+            return
         tableau, tem_base_trivial = self._padronizar_tableau(tableau.copy(), base)
        
         if not self.falha_na_base:
@@ -245,11 +251,14 @@ class Tableau:
         globals.show('Tableau na base viável:\n', t.tableau)
      
         self.tableau = self._solve_tableau(self.tableau)
+        if self.finalizado:
+            return
         if self.minimizacao:
             self.tableau[0][-1] *= -1
         self.simplex_otimo(self.tableau)
 
     def simplex_otimo(self, tableau):
+        self.finalizado = True
         globals.show('Tableau OTIMO:\n', tableau)
         linhas, _ = tableau.shape
         otimo = tableau[0,-1]
@@ -281,9 +290,9 @@ class Tableau:
             arquivo.write(f"{certificado}")
 
             # Apenas para testar o certificado:
-            self.validar_otimo(tableau[0][0:linhas-1], solucao)
+            if globals.validar_certificado:
+                self.validar_otimo(tableau[0][0:linhas-1], solucao)
 
-        sys.exit()
 
     def validar_otimo(self, certificado, solucao):
         c = self.c.T
@@ -294,6 +303,7 @@ class Tableau:
         return valido
 
     def simplex_inviavel(self, tableau):
+        self.finalizado = True
         globals.show('Tableau INVIAVEL:\n', tableau)
         linhas, _ = tableau.shape
         
@@ -306,9 +316,9 @@ class Tableau:
             arquivo.write(f"{certificado}")
 
             # Apenas para testar o certificado:
-            self.validar_inviavel(tableau[0][0:linhas-1])
+            if globals.validar_certificado:
+                self.validar_inviavel(tableau[0][0:linhas-1])
 
-        sys.exit()
 
     def validar_inviavel(self, certificado):
         condicional_1 = np.all(np.dot(certificado.T, self.A) >= 0.0)
@@ -318,6 +328,7 @@ class Tableau:
         return valido
 
     def simplex_ilimitado(self, tableau):
+        self.finalizado = True
         globals.show('Tableau ILIMITADO:\n', tableau)
         linhas, colunas = tableau.shape
         
@@ -357,9 +368,8 @@ class Tableau:
             arquivo.write(f"{certificado_str}")
 
             # Apenas para testar o certificado:
-            self.validar_ilimitado(np.array(certificado))
-
-        sys.exit()
+            if globals.validar_certificado:
+                self.validar_ilimitado(np.array(certificado))
 
     def validar_ilimitado(self, certificado):
         c = self.c.T

@@ -10,7 +10,8 @@ tag_controle = 'CONTROL_'
 
 epsilon = 0.00001
 precisao = 3
-verbose = True
+verbose = False
+validar_certificado = False
 
 def show(*args,**kwargs):
     if verbose:
