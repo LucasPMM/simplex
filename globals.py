@@ -3,10 +3,11 @@ folgas = ['>=', '<=']
 comparisons = [*folgas, '==']
 functions = ['MAX', 'MIN']
 
-tag_folga = 'f_'
-tag_livre = 'l_'
-tag_auxiliar = 'auxiliar_'
-tag_controle = 'CONTROL_'
+# Usando minha matrícula na esperança de garantir a unicidade do identificador 
+tag_folga = 'f_2021037961_'
+tag_livre = 'l_2021037961_'
+tag_auxiliar = 'auxiliar_2021037961_'
+tag_controle = 'CONTROL_2021037961_'
 
 epsilon = 0.00001
 precisao = 3
