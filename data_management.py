@@ -111,6 +111,10 @@ def read_data(self, file):
     with open(file, 'r') as f:
         equacoes = [linha.strip() for linha in f.readlines()]
 
+    # Remover parênteses:
+    for idx, eq in enumerate(equacoes):
+        equacoes[idx] = re.sub("[()]", "", eq)
+
     # Identificar restrições de igualdade de uma variável só e trocar por duas de >= e <=
     for i, eq in enumerate(equacoes.copy()):
         if '==' in eq and _conta_variavel(eq) == 1:

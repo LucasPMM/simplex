@@ -26,7 +26,7 @@ class Tableau:
         linhas, colunas = tableau.shape
         linhas -= 1
         c_t = [tableau[0][0]] if colunas-1 == 0 else tableau[0][linhas:colunas-1]
-        if min(c_t) >= 0: 
+        if min(c_t) >= -globals.epsilon: 
             return True
         return False
 
@@ -34,7 +34,8 @@ class Tableau:
         n = tableau.shape[0]
         if -globals.epsilon <= tableau[i, j] <= globals.epsilon:
             self.falha_na_base = True
-        tableau[i] = (tableau[i] / tableau[i, j]) if (tableau[i, j] != 0).any() else 0.0 # divide a linha i pela entrada ij
+        not_zero = not (-globals.epsilon <= tableau[i, j] <= globals.epsilon)
+        tableau[i] = (tableau[i] / tableau[i, j]) if not_zero else 0.0 # divide a linha i pela entrada ij
         for k in range(n):
             if k == i:
                 continue
@@ -52,7 +53,7 @@ class Tableau:
         b_dash = self.b.copy()
         A_dash = self.A.copy()
         for i, b_i in enumerate(b_dash):
-            if b_i < 0:
+            if b_i < -globals.epsilon:
                 A_dash[i] *= -1
                 b_dash[i] *= -1
                 certificados[i + 1] *= -1
@@ -181,7 +182,7 @@ class Tableau:
             c = tableau[0][linhas:colunas-1]
             j = linhas
             for idx, ci in enumerate(c):
-                if ci < 0:
+                if ci < -globals.epsilon:
                     j += idx
                     break
 
@@ -195,12 +196,14 @@ class Tableau:
             for k in range(1, linhas + 1):
                 b_k = tableau[k,colunas-1]
                 a_kj = tableau[k,j]
-                razao = -1 if a_kj == 0.0 or (a_kj < 0 and b_k == 0.0) else b_k / a_kj
+                a_kj_is_zero = -globals.epsilon <= a_kj <= globals.epsilon
+                b_k_is_zero = -globals.epsilon <= b_k <= globals.epsilon
+                razao = -1 if a_kj_is_zero or (a_kj < -globals.epsilon and b_k_is_zero) else b_k / a_kj
            
                 entra_na_base = self.variaveis_auxiliares[j-linhas]
                 sai_da_base = self.base_viavel[k-1]
                 #  razao < menor_razao e não <= para priorizar os menores indices
-                if razao >= 0 and (menor_razao == None or razao < menor_razao):
+                if razao >= -globals.epsilon and (menor_razao == None or razao < menor_razao):
                     i = k
                     menor_razao = razao
 
@@ -321,8 +324,8 @@ class Tableau:
 
 
     def validar_inviavel(self, certificado):
-        condicional_1 = np.all(np.dot(certificado.T, self.A) >= 0.0)
-        condicional_2 = np.dot(certificado.T, self.b) < 0.0
+        condicional_1 = np.all(np.dot(certificado.T, self.A) >= -globals.epsilon)
+        condicional_2 = np.dot(certificado.T, self.b) < -globals.epsilon
         valido = condicional_1 and condicional_2
         print('INVIÁVEL: ', valido)
         return valido
@@ -340,7 +343,7 @@ class Tableau:
             fail_idx = None
             c = tableau[0][linhas-1:colunas-1]
             for index, ci in enumerate(c):
-                if ci < 0:
+                if ci < -globals.epsilon:
                     fail_idx = index
                     break
             falha_computada = False
@@ -353,7 +356,7 @@ class Tableau:
                     idx = self.base_viavel.index(variavel)
                     if fail_idx != None:
                         certificado.append(abs(tableau[idx+1,fail_idx+linhas-1]))
-                elif c[idx_col] < 0 and not falha_computada:
+                elif c[idx_col] < -globals.epsilon and not falha_computada:
                     # A variavel que falhou entra como 1.0. Ela será o primeiro ci negativo
                     certificado.append(1.0)
                     falha_computada = True
@@ -374,8 +377,8 @@ class Tableau:
     def validar_ilimitado(self, certificado):
         c = self.c.T
         condicional_1 = np.all(abs(np.dot(self.A, certificado)) <= globals.epsilon)
-        condicional_2 = np.all(certificado.T >= 0.0)
-        condicional_3 = np.dot(c, certificado) > 0.0
+        condicional_2 = np.all(certificado.T >= -globals.epsilon)
+        condicional_3 = np.dot(c, certificado) > globals.epsilon
         valido = condicional_1 and condicional_2 and condicional_3
         print('ILIMITADO:', valido)
         return valido
