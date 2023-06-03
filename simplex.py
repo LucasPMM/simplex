@@ -2,7 +2,7 @@ import numpy as np
 import sys
 from data_management import read_data
 import globals
-from itertools import permutations
+from numpy import random
 
 class Tableau:
     def __init__(self):
@@ -86,26 +86,30 @@ class Tableau:
                 base_final[i] = None
 
         candiadatas = list(filter(lambda x: x not in base_otima, self.variaveis)) or []
-        combinacoes = list(permutations(candiadatas))
+        disponiveis = candiadatas
 
-        for disponiveis in combinacoes:
-            for idx, variavel in enumerate(self.base_viavel):
-                if globals.tag_auxiliar in variavel:
-                    disponiveis_validas = []
-                    for disponivel in disponiveis:
-                        index = self.variaveis.index(disponivel)
-                        valor_no_tableau = tableau[idx+1][index+tableau.shape[0]-1]
-                        if not -globals.epsilon <= valor_no_tableau <= globals.epsilon and disponivel not in base_final:
-                            disponiveis_validas.append(disponivel)
+        if None in base_final:
+            while True:
+                for idx, variavel in enumerate(self.base_viavel):
+                    if globals.tag_auxiliar in variavel:
+                        disponiveis_validas = []
+                        for disponivel in disponiveis:
+                            index = self.variaveis.index(disponivel)
+                            valor_no_tableau = tableau[idx+1][index+tableau.shape[0]-1]
+                            if not -globals.epsilon <= valor_no_tableau <= globals.epsilon and disponivel not in base_final:
+                                disponiveis_validas.append(disponivel)
 
-                    if len(disponiveis_validas) == 0:
-                        for i, valor in enumerate(base_final):
-                            if valor != None and globals.tag_auxiliar in valor:
-                                base_final[i] = None
-                        continue
-                    base_final[idx] = disponiveis_validas[0]
-            if None not in base_final:
-                break
+                        if len(disponiveis_validas) == 0:
+                            for i, valor in enumerate(base_final):
+                                if valor != None and globals.tag_auxiliar in valor:
+                                    base_final[i] = None
+                            continue
+                        base_final[idx] = disponiveis_validas[0]
+                if None not in base_final or len(base_final) == 1:
+                    break
+
+                random.shuffle(disponiveis)
+                
         self.base_viavel = base_final
         globals.show('BASE FINAL: ', self.base_viavel)
 
@@ -115,7 +119,7 @@ class Tableau:
 
         return base_final
     
-    def _padronizar_tableau(self, tableau, base=None):
+    def _padronizar_tableau(self, tableau, base=None, base_viavel=None):
         linhas, colunas = tableau.shape
         identidade = np.identity(linhas-1)
 
@@ -127,9 +131,21 @@ class Tableau:
                 tableau = self._pivotear(tableau.copy(), idx + 1, j + linhas-1)
 
             if self.falha_na_base:
-                combinacoes = list(permutations(base))
-                for combinacao in combinacoes:
+                combinacao = list(base)
+                contador = 0
+                while True:
+                    random.shuffle(combinacao)
                     tableau = tableau_inicial.copy()
+
+                    if contador > globals.max_loop:
+                        self.falha_na_base = False
+                        self.base_viavel = base_viavel
+                        for idx, variavel in enumerate(base_viavel):
+                            j = self.variaveis_auxiliares.index(variavel)
+                            tableau = self._pivotear(tableau.copy(), idx + 1, j + linhas-1)
+
+                        break
+
                     for variavel in combinacao:
                         self.falha_na_base = False
 
@@ -143,6 +159,8 @@ class Tableau:
                     if not self.falha_na_base:
                         globals.show('Pivotei na combinação', combinacao)
                         return tableau, True
+                    
+                    contador += 1
 
             # Retornando True pois o tableau já está na forma canonica
             return tableau, True
@@ -241,12 +259,13 @@ class Tableau:
         globals.show('Base trivial:\n', tem_base_trivial, self.base_viavel)
 
         # Setar as novas variáveis como a base da PL auxiliar
+        base_viavel = self.base_viavel
         self.base_viavel = self.variaveis_auxiliares[-linhas:]
         self.tableau = tableau
         base = self._problema_auxiliar()
         if self.finalizado:
             return
-        tableau, tem_base_trivial = self._padronizar_tableau(tableau.copy(), base)
+        tableau, tem_base_trivial = self._padronizar_tableau(tableau.copy(), base, base_viavel)
        
         if not self.falha_na_base:
             self.tableau = tableau

@@ -1,21 +1,19 @@
 import os
 
 inputs = [
-    # 'DEGENERATED',
-    # 'FEASIBLE2',
-    'HARD1',
-    # 'HARD3',
-    # 'HARD5',
+    'FEASIBLE1',
+    'INFEASIBLE1',
+    'INLIMITED1',
+    
+    'FEASIBLE2',
     'INFEASIBLE2',
-    # 'INLIMITED1', (ok)
-    # 'INLIMITED3',
-    # 'FEASIBLE1', (ok)
-    # 'FEASIBLE3',
-    # 'HARD2',
-    # 'HARD4',
-    # 'INFEASIBLE1', (ok)
-    # 'INFEASIBLE3',
     'INLIMITED2',
+    
+    'INLIMITED3',
+    'FEASIBLE3',
+    'INFEASIBLE3',
+    
+    'DEGENERATED',
 ]
 
 path_input = './tests/inputs/'

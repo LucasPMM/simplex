@@ -11,6 +11,7 @@ tag_controle = 'CONTROL_2021037961_'
 
 epsilon = 0.00001
 precisao = 3
+max_loop = 50000
 verbose = False
 validar_certificado = False
 
