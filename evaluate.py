@@ -14,6 +14,12 @@ inputs = [
     'INFEASIBLE3',
     
     'DEGENERATED',
+
+    'HARD1',
+    'HARD2',
+    'HARD3',
+    'HARD4',
+    'HARD5',
 ]
 
 path_input = './tests/inputs/'
